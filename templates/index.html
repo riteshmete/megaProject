@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenLaw — AI-Powered Legal Document Simplifier</title>
+    <meta name="description" content="Understand Indian legal documents in simple language with AI-powered simplification, key clause extraction, and visual analytics.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.1">
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header class="navbar">
+        <div class="container navbar-content">
+            <div class="logo">
+                <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span class="logo-title">OpenLaw</span>
+            </div>
+            <p class="tagline">Understand your legal documents in simple language</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+
+        <!-- Error Alert Banner -->
+        <div id="error-banner" class="alert-banner hidden">
+            <span id="error-message"></span>
+            <button id="close-error" class="close-btn">&times;</button>
+        </div>
+
+        <!-- Upload Section -->
+        <section class="card upload-card">
+            <h2>Upload Legal Document</h2>
+            <p class="section-desc">Select an Indian legal document (Rental agreement, Employment contract, Service agreement, NDA, etc.) in PDF format.</p>
+
+            <div id="drop-zone" class="drop-zone">
+                <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p class="drop-text">Drag &amp; Drop your PDF here</p>
+                <span class="divider-text">OR</span>
+                <label for="pdf-input" class="btn btn-secondary">Choose PDF</label>
+                <input type="file" id="pdf-input" accept=".pdf" class="file-input">
+            </div>
+
+            <!-- File Selected Preview -->
+            <div id="file-info" class="file-info hidden">
+                <div class="file-details">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <div>
+                        <strong id="file-name">document.pdf</strong>
+                        <span id="file-size" class="text-muted">2.4 MB</span>
+                    </div>
+                </div>
+                <button id="change-file-btn" class="btn-text">Change</button>
+            </div>
+
+            <!-- Action Button -->
+            <button id="analyze-btn" class="btn btn-primary btn-block hidden">Analyze Document</button>
+        </section>
+
+        <!-- Loading State Card -->
+        <section id="loading-card" class="card loading-card hidden">
+            <div class="spinner"></div>
+            <h3 id="loading-status">Extracting document...</h3>
+            <p class="text-muted">Please wait while AI processes your legal document.</p>
+        </section>
+
+        <!-- Results Section (Hidden until analyzed) -->
+        <div id="results-container" class="results-container hidden">
+
+            <!-- Download & Print Actions Bar -->
+            <div class="results-actions">
+                <button id="download-txt-btn" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Summary Report (.txt)
+                </button>
+                <button id="print-pdf-btn" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    Print / Save as PDF
+                </button>
+            </div>
+
+            <!-- Overview Card -->
+            <section class="card overview-card">
+                <div class="overview-header">
+                    <div>
+                        <span class="section-label">Document Overview</span>
+                        <h2 id="doc-type">Residential Rental Agreement</h2>
+                    </div>
+                    <div id="attention-badge-container">
+                        <span id="overall-attention-badge" class="badge badge-medium">Attention: Medium</span>
+                    </div>
+                </div>
+
+                <div class="overview-body">
+                    <div class="info-block">
+                        <h4>Summary</h4>
+                        <p id="doc-summary">Loading summary...</p>
+                    </div>
+                    <div class="info-block">
+                        <h4>Simple Explanation</h4>
+                        <p id="doc-simple-explanation">Loading explanation...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Key Information Grid -->
+            <section class="grid-2">
+                <!-- Parties -->
+                <div class="card">
+                    <h3 class="card-title">Parties Involved</h3>
+                    <ul id="parties-list" class="info-list">
+                        <li>None identified</li>
+                    </ul>
+                </div>
+
+                <!-- Important Dates -->
+                <div class="card">
+                    <h3 class="card-title">Important Dates</h3>
+                    <ul id="dates-list" class="info-list">
+                        <li>None identified</li>
+                    </ul>
+                </div>
+
+                <!-- Financial Obligations -->
+                <div class="card">
+                    <h3 class="card-title">Financial Obligations</h3>
+                    <ul id="financial-list" class="info-list">
+                        <li>None identified</li>
+                    </ul>
+                </div>
+
+                <!-- Key Points -->
+                <div class="card">
+                    <h3 class="card-title">Rights &amp; Key Points</h3>
+                    <ul id="key-points-list" class="info-list">
+                        <li>None identified</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Important Clauses Section -->
+            <section class="card-section">
+                <h2 class="section-title">Important Clauses</h2>
+                <div id="clauses-container" class="clauses-grid">
+                    <!-- Dynamic Clause Cards injected by JS -->
+                </div>
+            </section>
+
+            <!-- Areas Requiring Attention Section -->
+            <section class="card-section">
+                <h2 class="section-title">AI-Identified Areas Requiring Attention</h2>
+                <div id="attention-container" class="attention-grid">
+                    <!-- Dynamic Attention Cards injected by JS -->
+                </div>
+            </section>
+
+            <!-- Visualizations Section -->
+            <section class="card-section">
+                <h2 class="section-title">Document Analytics</h2>
+                <div class="grid-2">
+                    <div class="card chart-card">
+                        <h3>Clause Importance Distribution</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="clauseChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-card">
+                        <h3>Attention Severity Levels</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="attentionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ask About Document Section -->
+            <section class="card ask-card">
+                <h2>Ask About This Document</h2>
+                <p class="section-desc">Have specific questions regarding rent, notice period, penalties, or termination? Ask our AI assistant.</p>
+
+                <form id="ask-form" class="ask-form">
+                    <input type="text" id="ask-input" class="form-control" placeholder="e.g. What happens if I terminate this agreement early?" required>
+                    <button type="submit" id="ask-btn" class="btn btn-primary">Ask AI</button>
+                </form>
+
+                <div id="ask-results" class="ask-results-container">
+                    <!-- Q&A thread elements will appear here -->
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- Legal Disclaimer Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="disclaimer">
+                <strong>Legal Disclaimer:</strong> OpenLaw provides AI-generated explanations for informational and educational purposes only. It does not provide legal advice and should not replace consultation with a qualified legal professional.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Custom Script -->
+    <script src="{{ url_for('static', filename='script.js') }}?v=1.1"></script>
+</body>
+</html>

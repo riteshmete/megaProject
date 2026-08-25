@@ -184,12 +184,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderList('dates-list', data.important_dates);
         renderList('financial-list', data.financial_obligations);
 
-        // Combine key_points, rights, responsibilities if needed
+        // Combine key_points, rights, responsibilities cleanly
         const combinedKeyPoints = [];
-        if (data.key_points && data.key_points.length > 0) combinedKeyPoints.push(...data.key_points);
         if (data.rights && data.rights.length > 0) combinedKeyPoints.push(...data.rights.map(r => `Right: ${r}`));
+        if (data.key_points && data.key_points.length > 0) combinedKeyPoints.push(...data.key_points);
         if (data.responsibilities && data.responsibilities.length > 0) combinedKeyPoints.push(...data.responsibilities.map(r => `Responsibility: ${r}`));
-        renderList('key-points-list', combinedKeyPoints);
+        
+        const uniquePoints = Array.from(new Set(combinedKeyPoints));
+        renderList('key-points-list', uniquePoints);
 
         // Important Clauses Cards
         renderClauses(data.important_clauses || []);

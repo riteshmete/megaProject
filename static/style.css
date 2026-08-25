@@ -834,7 +834,34 @@ h1, h2, h3, h4 {
 .clause-row-actions {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
+}
+
+.clause-row-actions .badge,
+.attention-row-card .badge {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase;
+}
+
+.clause-row-actions .badge-high,
+.attention-row-card .badge-high {
+    color: #dc2626 !important;
+}
+
+.clause-row-actions .badge-medium,
+.attention-row-card .badge-medium {
+    color: #d97706 !important;
+}
+
+.clause-row-actions .badge-low,
+.attention-row-card .badge-low {
+    color: #16a34a !important;
 }
 
 .clause-body-content {

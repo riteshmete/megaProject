@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderList('parties-list', data.parties);
         renderList('dates-list', data.important_dates);
         renderList('financial-list', data.financial_obligations);
-        
+
         // Combine key_points, rights, responsibilities if needed
         const combinedKeyPoints = [];
         if (data.key_points && data.key_points.length > 0) combinedKeyPoints.push(...data.key_points);

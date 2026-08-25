@@ -685,17 +685,23 @@ h1, h2, h3, h4 {
     border-top: 1px solid var(--hairline);
 }
 
+.key-info-section .section-title {
+    font-size: 2rem; /* 32px */
+    font-weight: 600;
+}
+
 .key-info-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 44px 60px;
+    column-gap: 50px;
+    row-gap: 36px;
     margin-top: 28px;
 }
 
 @media (max-width: 768px) {
     .key-info-columns {
         grid-template-columns: 1fr;
-        gap: 32px;
+        gap: 28px;
     }
 }
 
@@ -705,9 +711,9 @@ h1, h2, h3, h4 {
 }
 
 .col-label {
-    font-size: 0.9rem; /* 14.4px - 15px */
+    font-size: 0.85rem; /* 13.6px - 14px */
     font-weight: 600;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     color: var(--text-muted);
     margin-bottom: 14px;
     text-transform: uppercase;
@@ -718,9 +724,10 @@ h1, h2, h3, h4 {
 }
 
 .clean-info-list li {
-    font-size: 16px; /* 16px content */
-    line-height: 1.6;
-    padding: 8px 0;
+    font-size: 16px; /* 16px actual content */
+    line-height: 1.55;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
     border-bottom: 1px dashed var(--hairline);
     color: var(--ink);
     word-wrap: break-word;
@@ -730,6 +737,7 @@ h1, h2, h3, h4 {
 
 .clean-info-list li:last-child {
     border-bottom: none;
+    margin-bottom: 0;
 }
 
 .right-label-badge {
@@ -743,12 +751,12 @@ h1, h2, h3, h4 {
     border: 1px solid var(--severity-low-border);
     padding: 3px 8px;
     border-radius: 4px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .right-item-text {
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: 16px; /* 16px content */
+    line-height: 1.55;
     color: var(--ink);
     margin-top: 2px;
     word-wrap: break-word;
@@ -756,11 +764,26 @@ h1, h2, h3, h4 {
     word-break: break-word;
 }
 
-/* 5. IMPORTANT CLAUSES (Readable Cards Padding 18px 24px) */
+/* Devanagari / Marathi Text Readability (17px, 1.6 line-height) */
+:lang(mr), [lang="mr"], .clean-info-list li:lang(mr), .right-item-text:lang(mr) {
+    font-size: 17px !important;
+    line-height: 1.6 !important;
+}
+
+/* 5. & 8. IMPORTANT CLAUSES (Readable Cards Padding 18px 24px) */
 .clauses-section {
     padding: 60px 0;
     background-color: var(--canvas-parchment);
     border-top: 1px solid var(--hairline);
+}
+
+.clauses-section .section-title {
+    font-size: 2rem; /* 32px */
+    font-weight: 600;
+}
+
+.clauses-section .section-subtitle {
+    font-size: 0.98rem; /* 15.6px - 16px */
 }
 
 .clauses-list-wrapper {
@@ -803,7 +826,7 @@ h1, h2, h3, h4 {
 }
 
 .clause-row-title {
-    font-size: 1.1rem; /* 17.6px */
+    font-size: 1.05rem; /* 16.8px - 17px */
     font-weight: 600;
     color: var(--ink);
 }
@@ -825,8 +848,8 @@ h1, h2, h3, h4 {
 }
 
 .clause-explanation-text {
-    font-size: 1rem; /* 16px */
-    line-height: 1.6;
+    font-size: 0.98rem; /* 15.6px - 16px */
+    line-height: 1.55;
     color: var(--ink);
 }
 
@@ -836,7 +859,7 @@ h1, h2, h3, h4 {
     padding: 12px 16px;
     border-radius: var(--radius-sm);
     font-style: italic;
-    font-size: 0.95rem;
+    font-size: 0.95rem; /* 15px - 16px */
     color: #3a3a3c;
     margin: 10px 0;
 }

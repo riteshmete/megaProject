@@ -25,6 +25,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const askInput = document.getElementById('ask-input');
     const askBtn = document.getElementById('ask-btn');
     const askResults = document.getElementById('ask-results');
+    const tryDemoBtn = document.getElementById('try-demo-btn');
+
+    if (tryDemoBtn) {
+        tryDemoBtn.addEventListener('click', () => {
+            const sampleData = {
+                document_type: "Residential Lease Agreement (Demo Sample)",
+                summary: "Standard 11-month residential rental agreement for property located in Pune, Maharashtra.",
+                simple_explanation: "This agreement outlines an 11-month tenancy at ₹35,000 monthly rent with ₹100,000 security deposit. Either party may terminate with 30 days notice.",
+                overall_attention_level: "Medium",
+                parties: [
+                    "Arjun Mehta (Landlord), Pune",
+                    "BluePeak Solutions (Tenant), Mumbai"
+                ],
+                important_dates: [
+                    "Effective Date: August 15, 2026",
+                    "Contract Duration: 11 Months",
+                    "Rent Due Date: 5th of every month"
+                ],
+                financial_obligations: [
+                    "Monthly Rent: ₹35,000",
+                    "Security Deposit: ₹100,000 (Refundable)",
+                    "Late Fee: 2% per month after 10 days"
+                ],
+                key_points: [
+                    "Landlord handles major structural repairs.",
+                    "Subletting requires landlord's written approval.",
+                    "Deposit refunded within 15 days of handover."
+                ],
+                rights: [
+                    "Client has the right to 30 days notice before eviction.",
+                    "Tenant receives full deposit refund minus verified damages."
+                ],
+                responsibilities: [
+                    "Tenant must pay monthly maintenance fee of ₹3,000.",
+                    "Tenant must keep premises in good clean condition."
+                ],
+                important_clauses: [
+                    {
+                        clause: "Notice Period",
+                        original_text: "Either party may terminate this agreement by giving 30 days written notice.",
+                        simple_explanation: "You or the landlord can end the tenancy with 1 month notice.",
+                        importance: "High"
+                    }
+                ],
+                attention_areas: [
+                    {
+                        title: "Late Payment Penalty",
+                        description: "2% monthly fee charged for rent delayed beyond 10 days.",
+                        severity: "Medium"
+                    }
+                ]
+            };
+            displayResults(sampleData);
+        });
+    }
 
     // State Variables
     let selectedFile = null;
@@ -184,13 +239,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderList('dates-list', data.important_dates);
         renderList('financial-list', data.financial_obligations);
 
-        // Combine key_points, rights, responsibilities cleanly
-        const combinedKeyPoints = [];
-        if (data.rights && data.rights.length > 0) combinedKeyPoints.push(...data.rights.map(r => `Right: ${r}`));
-        if (data.key_points && data.key_points.length > 0) combinedKeyPoints.push(...data.key_points);
-        if (data.responsibilities && data.responsibilities.length > 0) combinedKeyPoints.push(...data.responsibilities.map(r => `Responsibility: ${r}`));
-        
-        const uniquePoints = Array.from(new Set(combinedKeyPoints));
+        // Combine key_points, rights, responsibilities cleanly without adding repetitive 'Right:' prefix
+        const rawKeyPoints = [];
+        if (data.key_points && data.key_points.length > 0) rawKeyPoints.push(...data.key_points);
+        if (data.rights && data.rights.length > 0) rawKeyPoints.push(...data.rights);
+        if (data.responsibilities && data.responsibilities.length > 0) rawKeyPoints.push(...data.responsibilities);
+
+        const cleanedKeyPoints = rawKeyPoints.map(item => cleanRightText(item)).filter(Boolean);
+        const uniquePoints = Array.from(new Set(cleanedKeyPoints));
         renderList('key-points-list', uniquePoints);
 
         // Important Clauses Cards
@@ -210,6 +266,14 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.scrollIntoView({ behavior: 'smooth' });
     }
 
+    function cleanRightText(text) {
+        if (!text) return '';
+        let s = String(text).trim();
+        // Remove repetitive "Right:" or "Right: " prefix at start
+        s = s.replace(/^Right:\s*/i, '').trim();
+        return s;
+    }
+
     function renderList(elementId, items) {
         const listElem = document.getElementById(elementId);
         listElem.innerHTML = '';
@@ -219,9 +283,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        items.forEach(item => {
+        items.forEach(rawItem => {
+            const item = cleanRightText(rawItem);
+            if (!item) return;
+
             const li = document.createElement('li');
-            li.textContent = item;
+
+            // Format labeled items such as "ग्राहकाचा अधिकार: ..." or "Client Right: ..." cleanly
+            if (item.includes(':') && (item.includes('अधिकार') || item.includes('Right') || item.includes('Duty') || item.includes('Responsibility') || item.includes('जबाबदारी'))) {
+                const colonIdx = item.indexOf(':');
+                const label = item.substring(0, colonIdx).trim();
+                const detailText = item.substring(colonIdx + 1).trim();
+
+                if (detailText) {
+                    li.innerHTML = `<strong class="right-label-badge">${escapeHtml(label)}</strong><div class="right-item-text">${escapeHtml(detailText)}</div>`;
+                } else {
+                    li.textContent = item;
+                }
+            } else {
+                li.textContent = item;
+            }
             listElem.appendChild(li);
         });
     }
@@ -235,23 +316,46 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        clauses.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'clause-card';
+        clauses.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'clause-row-block';
 
             const importance = item.importance || 'Medium';
             const badgeClass = getBadgeClass(importance);
+            const numStr = String(index + 1).padStart(2, '0');
 
-            card.innerHTML = `
-                <div class="clause-header">
-                    <h3 class="clause-title">${escapeHtml(item.clause || 'Important Clause')}</h3>
-                    <span class="badge ${badgeClass}">${escapeHtml(importance)}</span>
+            row.innerHTML = `
+                <div class="clause-row-header">
+                    <div class="clause-row-left">
+                        <span class="clause-number">${numStr}</span>
+                        <h3 class="clause-row-title">${escapeHtml(item.clause || 'Important Clause')}</h3>
+                    </div>
+                    <div class="clause-row-actions">
+                        <span class="badge ${badgeClass}">${escapeHtml(importance.toUpperCase())}</span>
+                        ${item.original_text ? `<button class="btn-text toggle-clause-btn">View Original Clause</button>` : ''}
+                    </div>
                 </div>
-                ${item.original_text ? `<div class="original-quote">"${escapeHtml(item.original_text)}"</div>` : ''}
-                <p class="clause-explanation"><strong>Simple Explanation:</strong> ${escapeHtml(item.simple_explanation || 'N/A')}</p>
+                <div class="clause-body-content">
+                    <p class="clause-explanation-text">${escapeHtml(item.simple_explanation || 'N/A')}</p>
+                    ${item.original_text ? `
+                        <div class="clause-original-drawer hidden">
+                            <strong class="text-muted" style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em;">Original Clause Text</strong>
+                            <div class="original-text-quote">"${escapeHtml(item.original_text)}"</div>
+                        </div>
+                    ` : ''}
+                </div>
             `;
 
-            container.appendChild(card);
+            const toggleBtn = row.querySelector('.toggle-clause-btn');
+            if (toggleBtn) {
+                const drawer = row.querySelector('.clause-original-drawer');
+                toggleBtn.addEventListener('click', () => {
+                    drawer.classList.toggle('hidden');
+                    toggleBtn.textContent = drawer.classList.contains('hidden') ? 'View Original Clause' : 'Hide Original Clause';
+                });
+            }
+
+            container.appendChild(row);
         });
     }
 
@@ -264,22 +368,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        areas.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'attention-card';
+        areas.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'attention-row-card';
 
             const severity = item.severity || 'Medium';
             const badgeClass = getBadgeClass(severity);
+            const numStr = String(index + 1).padStart(2, '0');
 
-            card.innerHTML = `
-                <div class="attention-header">
-                    <h3 class="attention-title">${escapeHtml(item.title || 'Attention Area')}</h3>
-                    <span class="badge ${badgeClass}">${escapeHtml(severity)}</span>
+            row.innerHTML = `
+                <div style="display:flex; gap:20px; align-items:flex-start;">
+                    <span class="clause-number">${numStr}</span>
+                    <div>
+                        <h3 class="attention-row-title">${escapeHtml(item.title || 'Attention Provision')}</h3>
+                        <p class="attention-row-desc">${escapeHtml(item.description || 'N/A')}</p>
+                    </div>
                 </div>
-                <p class="clause-explanation">${escapeHtml(item.description || 'N/A')}</p>
+                <div>
+                    <span class="badge ${badgeClass}">${escapeHtml(severity.toUpperCase())}</span>
+                </div>
             `;
 
-            container.appendChild(card);
+            container.appendChild(row);
         });
     }
 
@@ -298,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/"/g, '&quot;');
     }
 
-    // --- Chart Visualizations ---
+    // --- Chart Visualizations (Restrained Apple Palette) ---
     function renderCharts(clauses, attentionAreas) {
         // Count clause importance
         const clauseCounts = { High: 0, Medium: 0, Low: 0 };
@@ -322,6 +432,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clauseChartInstance) clauseChartInstance.destroy();
         if (attentionChartInstance) attentionChartInstance.destroy();
 
+        // Restrained Colors: High: Soft Red, Medium: Soft Amber, Low: Action Blue
+        const colorPalette = ['#d70015', '#c67d00', '#0066cc'];
+
         // Chart 1: Clause Importance Bar Chart
         const ctx1 = document.getElementById('clauseChart').getContext('2d');
         clauseChartInstance = new Chart(ctx1, {
@@ -331,8 +444,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 datasets: [{
                     label: 'Number of Clauses',
                     data: [clauseCounts.High, clauseCounts.Medium, clauseCounts.Low],
-                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-                    borderRadius: 6
+                    backgroundColor: colorPalette,
+                    borderRadius: 8
                 }]
             },
             options: {
@@ -342,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     legend: { display: false }
                 },
                 scales: {
+                    x: { grid: { display: false } },
                     y: {
                         beginAtZero: true,
                         ticks: { stepSize: 1 }
@@ -358,7 +472,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: ['High Severity', 'Medium Severity', 'Low Severity'],
                 datasets: [{
                     data: [attentionCounts.High, attentionCounts.Medium, attentionCounts.Low],
-                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981']
+                    backgroundColor: colorPalette,
+                    borderWidth: 0
                 }]
             },
             options: {

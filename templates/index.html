@@ -12,208 +12,328 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.0">
 </head>
 <body>
 
-    <!-- Header Section -->
-    <header class="navbar">
-        <div class="container navbar-content">
-            <div class="logo">
-                <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-                <span class="logo-title">OpenLaw</span>
-            </div>
-            <p class="tagline">Understand your legal documents in simple language</p>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="container">
-
-        <!-- Error Alert Banner -->
-        <div id="error-banner" class="alert-banner hidden">
+    <!-- Error Alert Banner -->
+    <div id="error-banner" class="alert-banner hidden">
+        <div class="section-container alert-content">
             <span id="error-message"></span>
             <button id="close-error" class="close-btn">&times;</button>
         </div>
+    </div>
 
-        <!-- Upload Section -->
-        <section class="card upload-card">
-            <h2>Upload Legal Document</h2>
-            <p class="section-desc">Select an Indian legal document (Rental agreement, Employment contract, Service agreement, NDA, etc.) in PDF format.</p>
-
-            <div id="drop-zone" class="drop-zone">
-                <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <p class="drop-text">Drag &amp; Drop your PDF here</p>
-                <span class="divider-text">OR</span>
-                <label for="pdf-input" class="btn btn-secondary">Choose PDF</label>
-                <input type="file" id="pdf-input" accept=".pdf" class="file-input">
-            </div>
-
-            <!-- File Selected Preview -->
-            <div id="file-info" class="file-info hidden">
-                <div class="file-details">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- 4. NAVIGATION BAR -->
+    <header class="navbar">
+        <div class="section-container navbar-content">
+            <div class="navbar-left">
+                <a href="#" class="logo">
+                    <svg class="logo-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
                     </svg>
-                    <div>
-                        <strong id="file-name">document.pdf</strong>
-                        <span id="file-size" class="text-muted">2.4 MB</span>
-                    </div>
-                </div>
-                <button id="change-file-btn" class="btn-text">Change</button>
+                    <span class="logo-title">OpenLaw</span>
+                </a>
+                <span class="badge badge-pill-nav">AI Legal Assistant</span>
             </div>
 
-            <!-- Action Button -->
-            <button id="analyze-btn" class="btn btn-primary btn-block hidden">Analyze Document</button>
+            <nav class="nav-links">
+                <a href="#overview">Overview</a>
+                <a href="#upload">Upload</a>
+                <a href="#features">Features</a>
+                <a href="#disclaimer">Disclaimer</a>
+            </nav>
+
+            <div class="navbar-right">
+                <a href="#upload" class="btn btn-primary btn-nav">Analyze PDF</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN FULL-WIDTH CONTAINER -->
+    <main>
+
+        <!-- 5. HERO SECTION (80vh - 90vh Desktop) -->
+        <section id="overview" class="section-full hero-section">
+            <div class="section-container hero-container">
+                
+                <!-- Hero Left Column -->
+                <div class="hero-text-col">
+                    <h1 class="hero-headline">
+                        Understand Legal Documents.<br>
+                        <span class="hero-headline-accent">Without the Legal Jargon.</span>
+                    </h1>
+                    <p class="hero-subtext">
+                        OpenLaw uses AI to turn complex Indian legal documents into clear, easy-to-understand explanations.
+                    </p>
+                    <div class="hero-cta-group">
+                        <a href="#upload" class="btn btn-primary btn-large">Start Analysis</a>
+                        <button id="try-demo-btn" class="btn btn-secondary btn-large">Try Sample Document</button>
+                    </div>
+                    <div class="hero-trust-list">
+                        <span class="trust-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Indian Legal Documents
+                        </span>
+                        <span class="trust-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            AI-Powered Simplification
+                        </span>
+                        <span class="trust-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Clause &amp; Attention Analysis
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Hero Right Column: 6. Product Visual Preview -->
+                <div class="hero-visual-col">
+                    <div class="hero-visual-wrapper">
+                        <div class="hero-card-preview">
+                            <div class="preview-card-header">
+                                <div>
+                                    <span class="preview-doc-type">SERVICE AGREEMENT</span>
+                                    <div class="preview-doc-title">Software Development Terms</div>
+                                </div>
+                                <span class="badge badge-medium">Attention: Medium</span>
+                            </div>
+                            <div class="preview-card-body">
+                                <div class="preview-clause-block">
+                                    <span class="preview-clause-label">Important Clause</span>
+                                    <div class="preview-clause-title">15-day payment period</div>
+                                    <p class="preview-clause-desc">Late payments incur a 2% monthly interest penalty after grace period.</p>
+                                </div>
+                                <div class="preview-meta-row">
+                                    <span>Duration: 6 Months</span>
+                                    <span>Value: ₹2,40,000</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </section>
 
-        <!-- Loading State Card -->
-        <section id="loading-card" class="card loading-card hidden">
-            <div class="spinner"></div>
-            <h3 id="loading-status">Extracting document...</h3>
-            <p class="text-muted">Please wait while AI processes your legal document.</p>
+        <!-- 7. UPLOAD SECTION -->
+        <section id="upload" class="section-full upload-section">
+            <div class="section-container upload-container">
+                <div class="section-header center">
+                    <h2 class="section-title-large">Upload a Legal Document</h2>
+                    <p class="section-subtitle">Upload a PDF and let OpenLaw explain the important parts in simple language.</p>
+                </div>
+
+                <div class="upload-wrapper">
+                    <div id="drop-zone" class="drop-zone">
+                        <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p class="drop-text-primary">Drop your PDF here</p>
+                        <p class="drop-text-secondary">or choose a file from your computer</p>
+                        <div class="drop-action-row">
+                            <label for="pdf-input" class="btn btn-secondary">Choose PDF</label>
+                            <input type="file" id="pdf-input" accept=".pdf,application/pdf" class="file-input" hidden style="display: none !important;">
+                        </div>
+                    </div>
+
+                    <!-- File Selected Preview -->
+                    <div id="file-info" class="file-info hidden">
+                        <div class="file-details">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <div>
+                                <strong id="file-name">document.pdf</strong>
+                                <span id="file-size" class="text-muted">2.4 MB</span>
+                            </div>
+                        </div>
+                        <button id="change-file-btn" class="btn-text">Change</button>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button id="analyze-btn" class="btn btn-primary btn-block hidden">Analyze Document</button>
+                </div>
+            </div>
         </section>
 
-        <!-- Results Section (Hidden until analyzed) -->
+        <!-- Loading State Section -->
+        <section id="loading-card" class="section-full loading-section hidden">
+            <div class="section-container loading-container">
+                <div class="spinner"></div>
+                <h3 id="loading-status">Extracting document...</h3>
+                <p class="text-muted">Please wait while AI processes your legal document.</p>
+            </div>
+        </section>
+
+        <!-- 8. ANALYSIS RESULT SECTION (Hidden until analyzed) -->
         <div id="results-container" class="results-container hidden">
 
             <!-- Download & Print Actions Bar -->
-            <div class="results-actions">
-                <button id="download-txt-btn" class="btn btn-secondary">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Download Summary Report (.txt)
-                </button>
-                <button id="print-pdf-btn" class="btn btn-secondary">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                        <rect x="6" y="14" width="12" height="8"></rect>
-                    </svg>
-                    Print / Save as PDF
-                </button>
+            <div class="section-full actions-bar-section">
+                <div class="section-container results-actions">
+                    <button id="download-txt-btn" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Summary (.txt)
+                    </button>
+                    <button id="print-pdf-btn" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                        Print / Save as PDF
+                    </button>
+                </div>
             </div>
 
-            <!-- Overview Card -->
-            <section class="card overview-card">
-                <div class="overview-header">
-                    <div>
-                        <span class="section-label">Document Overview</span>
-                        <h2 id="doc-type">Residential Rental Agreement</h2>
-                    </div>
-                    <div id="attention-badge-container">
-                        <span id="overall-attention-badge" class="badge badge-medium">Attention: Medium</span>
-                    </div>
-                </div>
-
-                <div class="overview-body">
-                    <div class="info-block">
-                        <h4>Summary</h4>
-                        <p id="doc-summary">Loading summary...</p>
-                    </div>
-                    <div class="info-block">
-                        <h4>Simple Explanation</h4>
-                        <p id="doc-simple-explanation">Loading explanation...</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Key Information Grid -->
-            <section class="grid-2">
-                <!-- Parties -->
-                <div class="card">
-                    <h3 class="card-title">Parties Involved</h3>
-                    <ul id="parties-list" class="info-list">
-                        <li>None identified</li>
-                    </ul>
-                </div>
-
-                <!-- Important Dates -->
-                <div class="card">
-                    <h3 class="card-title">Important Dates</h3>
-                    <ul id="dates-list" class="info-list">
-                        <li>None identified</li>
-                    </ul>
-                </div>
-
-                <!-- Financial Obligations -->
-                <div class="card">
-                    <h3 class="card-title">Financial Obligations</h3>
-                    <ul id="financial-list" class="info-list">
-                        <li>None identified</li>
-                    </ul>
-                </div>
-
-                <!-- Key Points -->
-                <div class="card">
-                    <h3 class="card-title">Rights &amp; Key Points</h3>
-                    <ul id="key-points-list" class="info-list">
-                        <li>None identified</li>
-                    </ul>
-                </div>
-            </section>
-
-            <!-- Important Clauses Section -->
-            <section class="card-section">
-                <h2 class="section-title">Important Clauses</h2>
-                <div id="clauses-container" class="clauses-grid">
-                    <!-- Dynamic Clause Cards injected by JS -->
-                </div>
-            </section>
-
-            <!-- Areas Requiring Attention Section -->
-            <section class="card-section">
-                <h2 class="section-title">AI-Identified Areas Requiring Attention</h2>
-                <div id="attention-container" class="attention-grid">
-                    <!-- Dynamic Attention Cards injected by JS -->
-                </div>
-            </section>
-
-            <!-- Visualizations Section -->
-            <section class="card-section">
-                <h2 class="section-title">Document Analytics</h2>
-                <div class="grid-2">
-                    <div class="card chart-card">
-                        <h3>Clause Importance Distribution</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="clauseChart"></canvas>
+            <!-- Document Overview Header -->
+            <section class="section-full doc-header-section">
+                <div class="section-container">
+                    <span class="eyebrow-label">DOCUMENT ANALYSIS</span>
+                    <div class="doc-header-row">
+                        <div>
+                            <h1 id="doc-type" class="doc-main-title">Service Agreement</h1>
+                            <p class="doc-metadata-line">Analyzed by OpenLaw AI · Indian Jurisdiction</p>
                         </div>
-                    </div>
-                    <div class="card chart-card">
-                        <h3>Attention Severity Levels</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="attentionChart"></canvas>
+                        <div id="attention-badge-container">
+                            <span id="overall-attention-badge" class="badge badge-medium">ATTENTION: MEDIUM</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Ask About Document Section -->
-            <section class="card ask-card">
-                <h2>Ask About This Document</h2>
-                <p class="section-desc">Have specific questions regarding rent, notice period, penalties, or termination? Ask our AI assistant.</p>
+            <!-- 9. SUMMARY SECTION (In Simple Terms) -->
+            <section class="section-full summary-section">
+                <div class="section-container">
+                    <h2 class="section-title">In Simple Terms</h2>
+                    <div class="editorial-summary-block">
+                        <p id="doc-summary" class="lead-summary-text">Loading summary...</p>
+                        <div class="summary-divider"></div>
+                        <div class="simple-explanation-block">
+                            <h4>Detailed Overview</h4>
+                            <p id="doc-simple-explanation">Loading explanation...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <form id="ask-form" class="ask-form">
-                    <input type="text" id="ask-input" class="form-control" placeholder="e.g. What happens if I terminate this agreement early?" required>
-                    <button type="submit" id="ask-btn" class="btn btn-primary">Ask AI</button>
-                </form>
+            <!-- 10. KEY INFORMATION (Horizontal Columns) -->
+            <section class="section-full key-info-section">
+                <div class="section-container">
+                    <h2 class="section-title">Key Information</h2>
+                    <div class="key-info-columns">
+                        
+                        <div class="info-col">
+                            <h4 class="col-label">PARTIES INVOLVED</h4>
+                            <ul id="parties-list" class="clean-info-list">
+                                <li>None identified</li>
+                            </ul>
+                        </div>
 
-                <div id="ask-results" class="ask-results-container">
-                    <!-- Q&A thread elements will appear here -->
+                        <div class="info-col">
+                            <h4 class="col-label">IMPORTANT DATES</h4>
+                            <ul id="dates-list" class="clean-info-list">
+                                <li>None identified</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-col">
+                            <h4 class="col-label">FINANCIAL OBLIGATIONS</h4>
+                            <ul id="financial-list" class="clean-info-list">
+                                <li>None identified</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-col">
+                            <h4 class="col-label">RIGHTS &amp; KEY POINTS</h4>
+                            <ul id="key-points-list" class="clean-info-list">
+                                <li>None identified</li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- 11. IMPORTANT CLAUSES -->
+            <section id="features" class="section-full clauses-section">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Important Clauses</h2>
+                        <p class="section-subtitle">Clauses that may deserve closer attention.</p>
+                    </div>
+
+                    <div id="clauses-container" class="clauses-list-wrapper">
+                        <!-- Dynamic Expandable Clauses injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 12. ATTENTION AREAS -->
+            <section class="section-full attention-section">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Areas Requiring Attention</h2>
+                        <p class="section-subtitle">These are AI-identified provisions that may deserve a closer look. They are not legal conclusions.</p>
+                    </div>
+
+                    <div id="attention-container" class="attention-rows-wrapper">
+                        <!-- Dynamic Attention Rows injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 13. DOCUMENT ANALYTICS -->
+            <section class="section-full analytics-section">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Document Analytics</h2>
+                        <p class="section-subtitle">An overview of the provisions identified by OpenLaw.</p>
+                    </div>
+
+                    <div class="charts-grid-2">
+                        <div class="chart-box">
+                            <h3 class="chart-box-title">Clause Importance Distribution</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="clauseChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-box">
+                            <h3 class="chart-box-title">Attention Severity Levels</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="attentionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 14. ASK ABOUT THIS DOCUMENT -->
+            <section class="section-full ask-section">
+                <div class="section-container">
+                    <div class="ask-card-wrapper">
+                        <h2 class="section-title-large">Have a question?</h2>
+                        <p class="section-subtitle">Ask OpenLaw about anything mentioned in your uploaded document.</p>
+
+                        <form id="ask-form" class="ask-form-wrapper">
+                            <input type="text" id="ask-input" class="ask-input-control" placeholder="What happens if I terminate this agreement early?" required>
+                            <button type="submit" id="ask-btn" class="btn btn-primary btn-ask">Ask OpenLaw</button>
+                        </form>
+
+                        <div id="ask-results" class="ask-thread-wrapper">
+                            <!-- Q&A Answer Thread appears here -->
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -221,16 +341,45 @@
 
     </main>
 
-    <!-- Legal Disclaimer Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p class="disclaimer">
-                <strong>Legal Disclaimer:</strong> OpenLaw provides AI-generated explanations for informational and educational purposes only. It does not provide legal advice and should not replace consultation with a qualified legal professional.
-            </p>
+    <!-- 15. DISCLAIMER & 16. FOOTER -->
+    <footer id="disclaimer" class="footer-section">
+        <div class="section-full disclaimer-banner">
+            <div class="section-container">
+                <h4 class="disclaimer-title">Important Notice</h4>
+                <p class="disclaimer-text">
+                    OpenLaw provides AI-generated explanations for informational and educational purposes only. It does not provide legal advice and should not replace consultation with a qualified legal professional.
+                </p>
+            </div>
+        </div>
+
+        <div class="section-full footer-bottom">
+            <div class="section-container footer-content">
+                <div class="footer-left">
+                    <div class="logo">
+                        <svg class="logo-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="logo-title">OpenLaw</span>
+                    </div>
+                    <p class="footer-tagline">AI-powered legal document understanding.</p>
+                </div>
+                <div class="footer-right">
+                    <nav class="footer-links">
+                        <a href="#overview">Overview</a>
+                        <a href="#upload">Upload</a>
+                        <a href="#features">Features</a>
+                        <a href="#disclaimer">Disclaimer</a>
+                    </nav>
+                </div>
+            </div>
+            <div class="section-container copyright-row">
+                <p>&copy; 2026 OpenLaw. All rights reserved.</p>
+            </div>
         </div>
     </footer>
 
     <!-- Custom Script -->
-    <script src="{{ url_for('static', filename='script.js') }}?v=1.1"></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.0"></script>
 </body>
 </html>

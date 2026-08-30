@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenLaw — AI-Powered Legal Document Simplifier</title>
-    <meta name="description" content="Understand Indian legal documents in simple language with AI-powered simplification and key clause extraction.">
+    <meta name="description"
+        content="Understand Indian legal documents in simple language with AI-powered simplification and key clause extraction.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +14,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.0">
 </head>
+
 <body>
 
     <!-- Error Alert Banner -->
@@ -27,7 +30,8 @@
         <div class="section-container navbar-content">
             <div class="navbar-left">
                 <a href="#" class="logo">
-                    <svg class="logo-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="logo-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -57,7 +61,7 @@
         <!-- 5. HERO SECTION (80vh - 90vh Desktop) -->
         <section id="overview" class="section-full hero-section">
             <div class="section-container hero-container">
-                
+
                 <!-- Hero Left Column -->
                 <div class="hero-text-col">
                     <h1 class="hero-headline">
@@ -65,16 +69,35 @@
                         <span class="hero-headline-accent">Without the Legal Jargon.</span>
                     </h1>
                     <p class="hero-subtext">
-                        OpenLaw uses AI to turn complex Indian legal documents into clear, easy-to-understand explanations.
+                        OpenLaw uses AI to turn complex Indian legal documents into clear, easy-to-understand
+                        explanations.
                     </p>
                     <div class="hero-cta-group">
                         <a href="#upload" class="btn btn-primary btn-large">Start Analysis</a>
                         <button id="try-demo-btn" class="btn btn-secondary btn-large">Try Sample Document</button>
                     </div>
                     <div class="hero-trust-list">
-                        <span class="trust-item">Indian Legal Documents</span>
-                        <span class="trust-item">AI-Powered Simplification</span>
-                        <span class="trust-item">Clause &amp; Attention Analysis</span>
+                        <span class="trust-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Indian Legal Documents
+                        </span>
+                        <span class="trust-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            AI-Powered Simplification
+                        </span>
+                        <span class="trust-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Clause &amp; Attention Analysis
+                        </span>
                     </div>
                 </div>
 
@@ -93,7 +116,8 @@
                                 <div class="preview-clause-block">
                                     <span class="preview-clause-label">Important Clause</span>
                                     <div class="preview-clause-title">15-day payment period</div>
-                                    <p class="preview-clause-desc">Late payments incur a 2% monthly interest penalty after grace period.</p>
+                                    <p class="preview-clause-desc">Late payments incur a 2% monthly interest penalty
+                                        after grace period.</p>
                                 </div>
                                 <div class="preview-meta-row">
                                     <span>Duration: 6 Months</span>
@@ -112,12 +136,14 @@
             <div class="section-container upload-container">
                 <div class="section-header center">
                     <h2 class="section-title-large">Upload a Legal Document</h2>
-                    <p class="section-subtitle">Upload a PDF and let OpenLaw explain the important parts in simple language.</p>
+                    <p class="section-subtitle">Upload a PDF and let OpenLaw explain the important parts in simple
+                        language.</p>
                 </div>
 
                 <div class="upload-wrapper">
                     <div id="drop-zone" class="drop-zone">
-                        <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.5">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -126,14 +152,16 @@
                         <p class="drop-text-secondary">or choose a file from your computer</p>
                         <div class="drop-action-row">
                             <label for="pdf-input" class="btn btn-secondary">Choose PDF</label>
-                            <input type="file" id="pdf-input" accept=".pdf,application/pdf" class="file-input" hidden style="display: none !important;">
+                            <input type="file" id="pdf-input" accept=".pdf,application/pdf" class="file-input" hidden
+                                style="display: none !important;">
                         </div>
                     </div>
 
                     <!-- File Selected Preview -->
                     <div id="file-info" class="file-info hidden">
                         <div class="file-details">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                             </svg>
@@ -167,7 +195,8 @@
             <div class="section-full actions-bar-section">
                 <div class="section-container results-actions">
                     <button id="download-txt-btn" class="btn btn-secondary">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -175,7 +204,8 @@
                         Download Summary (.txt)
                     </button>
                     <button id="print-pdf-btn" class="btn btn-secondary">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <polyline points="6 9 6 2 18 2 18 9"></polyline>
                             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                             <rect x="6" y="14" width="12" height="8"></rect>
@@ -221,7 +251,8 @@
                 <div class="section-container">
                     <div class="section-header">
                         <h2 class="section-title">Who Does This Agreement Favor?</h2>
-                        <p class="section-subtitle">AI analysis of rights, obligations, risk distribution, and favorability between parties.</p>
+                        <p class="section-subtitle">AI analysis of rights, obligations, risk distribution, and
+                            favorability between parties.</p>
                     </div>
 
                     <div class="favorability-card-wrapper">
@@ -271,8 +302,14 @@
 
                         <!-- Disclaimer -->
                         <div class="favorability-disclaimer">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                            <span>This analysis is AI-generated for informational purposes and does not constitute legal advice.</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span>This analysis is AI-generated for informational purposes and does not constitute legal
+                                advice.</span>
                         </div>
                     </div>
                 </div>
@@ -283,7 +320,7 @@
                 <div class="section-container">
                     <h2 class="section-title">Key Information</h2>
                     <div class="key-info-columns">
-                        
+
                         <div class="info-col">
                             <h4 class="col-label">PARTIES INVOLVED</h4>
                             <ul id="parties-list" class="clean-info-list">
@@ -335,7 +372,8 @@
                 <div class="section-container">
                     <div class="section-header">
                         <h2 class="section-title">Areas Requiring Attention</h2>
-                        <p class="section-subtitle">These are AI-identified provisions that may deserve a closer look. They are not legal conclusions.</p>
+                        <p class="section-subtitle">These are AI-identified provisions that may deserve a closer look.
+                            They are not legal conclusions.</p>
                     </div>
 
                     <div id="attention-container" class="attention-rows-wrapper">
@@ -352,7 +390,8 @@
                         <p class="section-subtitle">Ask OpenLaw about anything mentioned in your uploaded document.</p>
 
                         <form id="ask-form" class="ask-form-wrapper">
-                            <input type="text" id="ask-input" class="ask-input-control" placeholder="What happens if I terminate this agreement early?" required>
+                            <input type="text" id="ask-input" class="ask-input-control"
+                                placeholder="What happens if I terminate this agreement early?" required>
                             <button type="submit" id="ask-btn" class="btn btn-primary btn-ask">Ask OpenLaw</button>
                         </form>
 
@@ -373,7 +412,8 @@
             <div class="section-container">
                 <h4 class="disclaimer-title">Important Notice</h4>
                 <p class="disclaimer-text">
-                    OpenLaw provides AI-generated explanations for informational and educational purposes only. It does not provide legal advice and should not replace consultation with a qualified legal professional.
+                    OpenLaw provides AI-generated explanations for informational and educational purposes only. It does
+                    not provide legal advice and should not replace consultation with a qualified legal professional.
                 </p>
             </div>
         </div>
@@ -382,7 +422,8 @@
             <div class="section-container footer-content">
                 <div class="footer-left">
                     <div class="logo">
-                        <svg class="logo-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <svg class="logo-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                         </svg>
@@ -408,4 +449,5 @@
     <!-- Custom Script -->
     <script src="{{ url_for('static', filename='script.js') }}?v=2.0"></script>
 </body>
+
 </html>

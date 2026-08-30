@@ -85,10 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = null;
     let currentAnalysisData = null;
 
-    // Chart instances
-    let clauseChartInstance = null;
-    let attentionChartInstance = null;
-
     // --- File Drag & Drop Handlers ---
     ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
@@ -255,9 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Attention Areas Cards
         renderAttentionAreas(data.attention_areas || []);
 
-        // Render Charts
-        renderCharts(data.important_clauses || [], data.attention_areas || []);
-
         // Clear previous Q&A thread
         askResults.innerHTML = '';
 
@@ -406,84 +399,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
-    }
-
-    // --- Chart Visualizations (Restrained Apple Palette) ---
-    function renderCharts(clauses, attentionAreas) {
-        // Count clause importance
-        const clauseCounts = { High: 0, Medium: 0, Low: 0 };
-        clauses.forEach(c => {
-            const imp = (c.importance || 'Medium').toLowerCase();
-            if (imp.includes('high')) clauseCounts.High++;
-            else if (imp.includes('low')) clauseCounts.Low++;
-            else clauseCounts.Medium++;
-        });
-
-        // Count attention severities
-        const attentionCounts = { High: 0, Medium: 0, Low: 0 };
-        attentionAreas.forEach(a => {
-            const sev = (a.severity || 'Medium').toLowerCase();
-            if (sev.includes('high')) attentionCounts.High++;
-            else if (sev.includes('low')) attentionCounts.Low++;
-            else attentionCounts.Medium++;
-        });
-
-        // Destroy previous instances
-        if (clauseChartInstance) clauseChartInstance.destroy();
-        if (attentionChartInstance) attentionChartInstance.destroy();
-
-        // Restrained Colors: High: Soft Red, Medium: Soft Amber, Low: Action Blue
-        const colorPalette = ['#d70015', '#c67d00', '#0066cc'];
-
-        // Chart 1: Clause Importance Bar Chart
-        const ctx1 = document.getElementById('clauseChart').getContext('2d');
-        clauseChartInstance = new Chart(ctx1, {
-            type: 'bar',
-            data: {
-                labels: ['High', 'Medium', 'Low'],
-                datasets: [{
-                    label: 'Number of Clauses',
-                    data: [clauseCounts.High, clauseCounts.Medium, clauseCounts.Low],
-                    backgroundColor: colorPalette,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
-                    }
-                }
-            }
-        });
-
-        // Chart 2: Attention Severity Doughnut Chart
-        const ctx2 = document.getElementById('attentionChart').getContext('2d');
-        attentionChartInstance = new Chart(ctx2, {
-            type: 'doughnut',
-            data: {
-                labels: ['High Severity', 'Medium Severity', 'Low Severity'],
-                datasets: [{
-                    data: [attentionCounts.High, attentionCounts.Medium, attentionCounts.Low],
-                    backgroundColor: colorPalette,
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
     }
 
     // --- Ask Question Action ---

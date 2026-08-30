@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenLaw — AI-Powered Legal Document Simplifier</title>
-    <meta name="description" content="Understand Indian legal documents in simple language with AI-powered simplification, key clause extraction, and visual analytics.">
+    <meta name="description" content="Understand Indian legal documents in simple language with AI-powered simplification and key clause extraction.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.0">
 </head>
@@ -289,31 +287,6 @@
 
                     <div id="attention-container" class="attention-rows-wrapper">
                         <!-- Dynamic Attention Rows injected by JS -->
-                    </div>
-                </div>
-            </section>
-
-            <!-- 13. DOCUMENT ANALYTICS -->
-            <section class="section-full analytics-section">
-                <div class="section-container">
-                    <div class="section-header">
-                        <h2 class="section-title">Document Analytics</h2>
-                        <p class="section-subtitle">An overview of the provisions identified by OpenLaw.</p>
-                    </div>
-
-                    <div class="charts-grid-2">
-                        <div class="chart-box">
-                            <h3 class="chart-box-title">Clause Importance Distribution</h3>
-                            <div class="chart-wrapper">
-                                <canvas id="clauseChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="chart-box">
-                            <h3 class="chart-box-title">Attention Severity Levels</h3>
-                            <div class="chart-wrapper">
-                                <canvas id="attentionChart"></canvas>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </section>

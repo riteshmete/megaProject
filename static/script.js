@@ -75,7 +75,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         description: "2% monthly fee charged for rent delayed beyond 10 days.",
                         severity: "Medium"
                     }
-                ]
+                ],
+                favorability_analysis: {
+                    parties: ["Arjun Mehta (Landlord)", "BluePeak Solutions (Tenant)"],
+                    favored_party: "Landlord (Arjun Mehta)",
+                    favorability_score: 65,
+                    party_scores: [
+                        { party: "Landlord (Arjun Mehta)", score: 65 },
+                        { party: "Tenant (BluePeak Solutions)", score: 35 }
+                    ],
+                    confidence: "High",
+                    verdict: "Moderately favors the Landlord",
+                    overall_assessment: "The landlord appears more favored due to strict late-payment penalties and subletting restrictions, though standard tenant termination rights remain intact.",
+                    reasons: [
+                        "Imposes a 2% monthly fee on delayed payments after a 10-day grace period.",
+                        "Strictly prohibits subletting without mandatory written landlord approval.",
+                        "Deposit return timeframe is set to 15 days post-handover."
+                    ],
+                    supporting_clauses: [
+                        {
+                            clause: "Penalty Clause",
+                            target_party: "Landlord",
+                            explanation: "Favors Landlord by ensuring monthly interest on late rent payments."
+                        },
+                        {
+                            clause: "Subletting Restriction",
+                            target_party: "Landlord",
+                            explanation: "Favors Landlord by giving full approval veto over third-party occupancy."
+                        },
+                        {
+                            clause: "Termination & Notice",
+                            target_party: "Tenant",
+                            explanation: "Favors Tenant by permitting equal 30 days notice to end lease."
+                        }
+                    ]
+                }
             };
             displayResults(sampleData);
         });
@@ -251,6 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Attention Areas Cards
         renderAttentionAreas(data.attention_areas || []);
 
+        // Render Party Favorability Analysis
+        renderFavorabilityAnalysis(data);
+
         // Clear previous Q&A thread
         askResults.innerHTML = '';
 
@@ -399,6 +436,91 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    // --- Party Favorability Analysis ---
+    function renderFavorabilityAnalysis(data) {
+        const fav = data.favorability_analysis || {};
+        const partyNameElem = document.getElementById('fav-party-name');
+        const scoreDisplayElem = document.getElementById('fav-score-display');
+        const confidenceBadgeElem = document.getElementById('fav-confidence-badge');
+        const verdictDisplayElem = document.getElementById('fav-verdict-display');
+        const scoresContainer = document.getElementById('fav-party-scores-container');
+        const leadTextElem = document.getElementById('fav-overall-assessment');
+        const reasonsListElem = document.getElementById('fav-reasons-list');
+        const clausesGridElem = document.getElementById('fav-supporting-clauses');
+
+        if (!partyNameElem) return;
+
+        const favoredParty = fav.favored_party || 'Balanced';
+        const score = fav.favorability_score !== undefined ? fav.favorability_score : 50;
+        const confidence = fav.confidence || 'Medium';
+        const verdict = fav.verdict || 'Relatively balanced between the parties';
+        const overallAssessment = fav.overall_assessment || 'No specific favorability assessment provided for this document.';
+        const reasons = fav.reasons || [];
+        const supportingClauses = fav.supporting_clauses || [];
+
+        partyNameElem.textContent = favoredParty;
+        scoreDisplayElem.textContent = `${score}/100`;
+
+        confidenceBadgeElem.textContent = confidence.toUpperCase();
+        confidenceBadgeElem.className = 'badge ' + getBadgeClass(confidence);
+
+        verdictDisplayElem.textContent = verdict;
+        leadTextElem.textContent = overallAssessment;
+
+        // Render party score breakdown bars
+        scoresContainer.innerHTML = '';
+        const partyScores = fav.party_scores || [];
+        if (partyScores.length > 0) {
+            partyScores.forEach(ps => {
+                const item = document.createElement('div');
+                item.className = 'party-score-row';
+                const pName = escapeHtml(ps.party || 'Party');
+                const pScore = Math.min(100, Math.max(0, ps.score || 50));
+                item.innerHTML = `
+                    <div class="party-score-label">
+                        <span>${pName}</span>
+                        <strong>${pScore}%</strong>
+                    </div>
+                    <div class="party-score-bar-bg">
+                        <div class="party-score-bar-fill" style="width: ${pScore}%;"></div>
+                    </div>
+                `;
+                scoresContainer.appendChild(item);
+            });
+        }
+
+        // Render Reasons (Why?)
+        reasonsListElem.innerHTML = '';
+        if (reasons.length === 0) {
+            reasonsListElem.innerHTML = '<li class="text-muted">No specific reasons detailed.</li>';
+        } else {
+            reasons.forEach(r => {
+                const li = document.createElement('li');
+                li.textContent = r;
+                reasonsListElem.appendChild(li);
+            });
+        }
+
+        // Render Supporting Clauses
+        clausesGridElem.innerHTML = '';
+        if (supportingClauses.length === 0) {
+            clausesGridElem.innerHTML = '<p class="text-muted">No specific supporting clauses highlighted.</p>';
+        } else {
+            supportingClauses.forEach(sc => {
+                const card = document.createElement('div');
+                card.className = 'fav-clause-card';
+                card.innerHTML = `
+                    <div class="fav-clause-header">
+                        <span class="fav-clause-title">${escapeHtml(sc.clause || 'Clause')}</span>
+                        ${sc.target_party ? `<span class="badge badge-medium">${escapeHtml(sc.target_party.toUpperCase())}</span>` : ''}
+                    </div>
+                    <p class="fav-clause-explanation">${escapeHtml(sc.explanation || '')}</p>
+                `;
+                clausesGridElem.appendChild(card);
+            });
+        }
     }
 
     // --- Ask Question Action ---

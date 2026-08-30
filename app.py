@@ -247,14 +247,46 @@ Use exactly this structure:
 
     "termination_conditions": [],
 
-    "overall_attention_level": "Low"
+    "overall_attention_level": "Low",
+
+    "favorability_analysis": {{
+        "parties": [],
+        "favored_party": "",
+        "favorability_score": 50,
+        "party_scores": [
+            {{
+                "party": "",
+                "score": 50
+            }}
+        ],
+        "confidence": "High",
+        "verdict": "",
+        "overall_assessment": "",
+        "reasons": [],
+        "supporting_clauses": [
+            {{
+                "clause": "",
+                "target_party": "",
+                "explanation": ""
+            }}
+        ]
+    }}
 }}
 
-For importance and severity use only:
+For importance, severity, and confidence use only:
 
 Low
 Medium
 High
+
+PARTY FAVORABILITY RULES:
+- Identify all parties (e.g. Landlord, Tenant, Buyer, Seller, Employer, Employee, Client, Provider).
+- Evaluate rights, termination, payment, penalties, liability, IP, and risk distribution between parties.
+- If one party benefits more, name the favored_party, assign scores (0-100), set confidence (High/Medium/Low), and provide a concise verdict (e.g., "Moderately favors Party A").
+- If terms are evenly balanced, set favored_party to "Balanced", score to 50, and verdict to "Relatively balanced between the parties".
+- If document lacks sufficient detail to determine favorability, set favored_party to "Insufficient information" and verdict to "Insufficient information to determine favorability".
+- Explain "why" in overall_assessment and reasons list.
+- Detail specific supporting_clauses showing clause number/title, target_party, and brief explanation.
 
 Keep:
 

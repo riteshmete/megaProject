@@ -225,6 +225,68 @@
                 </div>
             </section>
 
+            <!-- 9.5 PARTY FAVORABILITY ANALYSIS -->
+            <section id="favorability-section" class="section-full favorability-section">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Who Does This Agreement Favor?</h2>
+                        <p class="section-subtitle">AI analysis of rights, obligations, risk distribution, and favorability between parties.</p>
+                    </div>
+
+                    <div class="favorability-card-wrapper">
+                        <!-- Key Metrics Bar -->
+                        <div class="favorability-metrics-grid">
+                            <div class="favorability-metric-box">
+                                <span class="metric-label">Favored Party</span>
+                                <div id="fav-party-name" class="metric-value">-</div>
+                            </div>
+                            <div class="favorability-metric-box">
+                                <span class="metric-label">Favorability Score</span>
+                                <div id="fav-score-display" class="metric-value">-</div>
+                            </div>
+                            <div class="favorability-metric-box">
+                                <span class="metric-label">Confidence</span>
+                                <div id="fav-confidence-container">
+                                    <span id="fav-confidence-badge" class="badge badge-medium">-</span>
+                                </div>
+                            </div>
+                            <div class="favorability-metric-box">
+                                <span class="metric-label">Verdict</span>
+                                <div id="fav-verdict-display" class="metric-value-sm">-</div>
+                            </div>
+                        </div>
+
+                        <!-- Score Breakdown per Party -->
+                        <div id="fav-party-scores-container" class="party-scores-wrapper">
+                            <!-- Injected dynamically by JS -->
+                        </div>
+
+                        <!-- Why? Section -->
+                        <div class="favorability-explanation-block">
+                            <h4 class="favorability-subhead">Why?</h4>
+                            <p id="fav-overall-assessment" class="favorability-lead-text">Analyzing favorability...</p>
+                            <ul id="fav-reasons-list" class="favorability-reasons-list">
+                                <!-- Injected dynamically by JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Clauses Affecting Favorability -->
+                        <div class="favorability-clauses-block">
+                            <h4 class="favorability-subhead">Clauses Affecting Favorability</h4>
+                            <div id="fav-supporting-clauses" class="favorability-clauses-grid">
+                                <!-- Injected dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Disclaimer -->
+                        <div class="favorability-disclaimer">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            <span>This analysis is AI-generated for informational purposes and does not constitute legal advice.</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- 10. KEY INFORMATION (Horizontal Columns) -->
             <section class="section-full key-info-section">
                 <div class="section-container">

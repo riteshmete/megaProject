@@ -210,32 +210,34 @@ h1, h2, h3, h4 {
     text-decoration: underline;
 }
 
-/* BADGES SYSTEM (12px - 13px) */
+/* BADGES SYSTEM (Text-only indicator labels) */
 .badge {
     display: inline-block;
-    padding: 5px 12px;
-    border-radius: var(--radius-pill);
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
     font-size: 0.8rem; /* 12.8px */
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.04em;
 }
 
 .badge-high {
-    background-color: var(--severity-high-bg);
-    color: var(--severity-high-color);
-    border: 1px solid var(--severity-high-border);
+    background: none !important;
+    color: #dc2626 !important;
+    border: none !important;
 }
 
 .badge-medium {
-    background-color: var(--severity-medium-bg);
-    color: var(--severity-medium-color);
-    border: 1px solid var(--severity-medium-border);
+    background: none !important;
+    color: #d97706 !important;
+    border: none !important;
 }
 
 .badge-low {
-    background-color: var(--severity-low-bg);
-    color: var(--severity-low-color);
-    border: 1px solid var(--severity-low-border);
+    background: none !important;
+    color: #16a34a !important;
+    border: none !important;
 }
 
 /* ALERT BANNER */
@@ -301,13 +303,13 @@ h1, h2, h3, h4 {
 }
 
 .badge-pill-nav {
-    background-color: var(--canvas-parchment);
+    background: none !important;
     color: var(--text-muted);
     font-size: 0.75rem;
-    padding: 3px 10px;
-    border-radius: var(--radius-pill);
+    padding: 0 !important;
+    border-radius: 0 !important;
     font-weight: 500;
-    border: 1px solid var(--hairline);
+    border: none !important;
 }
 
 .nav-links {
@@ -747,11 +749,11 @@ h1, h2, h3, h4 {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--primary);
-    background-color: var(--primary-light);
-    border: 1px solid var(--severity-low-border);
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin-bottom: 6px;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    margin-bottom: 4px;
 }
 
 .right-item-text {

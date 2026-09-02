@@ -170,6 +170,24 @@ h1, h2, h3, h4 {
     transform: scale(0.98);
 }
 
+.btn:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
 .btn-primary:active {
     transform: scale(0.95);
 }

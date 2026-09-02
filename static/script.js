@@ -14,8 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     const closeErrorBtn = document.getElementById('close-error');
 
-    const loadingCard = document.getElementById('loading-card');
-    const loadingStatus = document.getElementById('loading-status');
     const resultsContainer = document.getElementById('results-container');
 
     const downloadTxtBtn = document.getElementById('download-txt-btn');
@@ -206,19 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hideError();
         resultsContainer.classList.add('hidden');
-        loadingCard.classList.remove('hidden');
+
         analyzeBtn.disabled = true;
-
-        // Progressive Loading Messages
-        loadingStatus.textContent = 'Extracting document...';
-
-        const stepTimer1 = setTimeout(() => {
-            loadingStatus.textContent = 'Analyzing document with AI...';
-        }, 1500);
-
-        const stepTimer2 = setTimeout(() => {
-            loadingStatus.textContent = 'Preparing results...';
-        }, 4000);
+        analyzeBtn.innerHTML = '<span class="btn-spinner"></span> Analyzing Document...';
 
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -228,9 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 body: formData
             });
-
-            clearTimeout(stepTimer1);
-            clearTimeout(stepTimer2);
 
             const data = await response.json();
 
@@ -244,8 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             showError(err.message || 'Unable to analyze the document right now. Please try again.');
         } finally {
-            loadingCard.classList.add('hidden');
             analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = 'Analyze Document';
         }
     });
 

@@ -1,9 +1,11 @@
 import os
 import json
+import re
 import pymupdf
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
 # Load .env file
 load_dotenv()
@@ -42,47 +44,83 @@ def extract_text(pdf_data):
 
 
 # =========================================================
+# SAFELY EXTRACT JSON FROM TEXT
+# =========================================================
+
+def extract_json_from_text(text):
+
+    if not text:
+        raise ValueError("Empty response received from Gemini.")
+
+    text = text.strip()
+
+    # Direct JSON parse attempt
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    # Strip code block wrappers like ```json ... ``` or ``` ... ```
+    cleaned = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE | re.MULTILINE)
+    cleaned = re.sub(r"\s*```$", "", cleaned, flags=re.IGNORECASE | re.MULTILINE).strip()
+
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+
+    # Extract JSON substring starting from first '{' to last '}'
+    first_brace = text.find("{")
+    last_brace = text.rfind("}")
+
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        json_substring = text[first_brace:last_brace + 1].strip()
+
+        try:
+            return json.loads(json_substring)
+        except Exception:
+            # Strip invalid control characters if present
+            cleaned_substring = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', json_substring)
+            try:
+                return json.loads(cleaned_substring)
+            except Exception:
+                pass
+
+    raise json.JSONDecodeError("Could not extract valid JSON structure", text, 0)
+
+
+# =========================================================
 # ASK GEMINI
 # =========================================================
 
-def ask_gemini(prompt):
+def ask_gemini(prompt, response_mime_type=None):
 
-    # Try the main model first
-    models = [
-        "gemini-3.6-flash",
-        "gemini-2.5-flash"
-    ]
+    model = "gemini-3.6-flash"
 
-    last_error = None
+    try:
 
-    for model in models:
+        print("Trying model:", model)
 
-        try:
+        config = types.GenerateContentConfig(response_mime_type=response_mime_type) if response_mime_type else None
 
-            print("Trying model:", model)
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=config
+        )
 
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt
-            )
+        if not response or not response.text:
+            raise ValueError(f"Model {model} returned an empty response.")
 
-            print("Gemini response received.")
+        print("Gemini response received.")
 
-            return response.text
+        return response.text
 
-        except Exception as error:
+    except Exception as error:
 
-            print("Model error:", error)
+        print("Model error:", error)
 
-            last_error = error
-
-            # Try the next model
-            continue
-
-    # If both models failed
-    if last_error is not None:
-        raise last_error
-    raise RuntimeError("All models failed to respond.")
+        raise error
 
 
 # =========================================================
@@ -304,20 +342,17 @@ DOCUMENT:
 {text}
 """
 
-        # Ask Gemini
-        result = ask_gemini(prompt)
+        # Ask Gemini with JSON response mime type specified
+        result = ask_gemini(prompt, response_mime_type="application/json")
 
-        # Remove markdown JSON formatting if Gemini adds it
-        result = result.replace("```json", "")
-        result = result.replace("```", "")
-        result = result.strip()
-
-        # Convert JSON string to Python object
-        data = json.loads(result)
+        # Extract and convert JSON string to Python object
+        data = extract_json_from_text(result)
 
         return jsonify(data)
 
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError) as error:
+
+        print("JSON PARSE ERROR:", error)
 
         return jsonify({
             "error": "Gemini returned an unexpected response. Please try again."
@@ -326,6 +361,12 @@ DOCUMENT:
     except Exception as error:
 
         print("FINAL ERROR:", error)
+
+        err_str = str(error)
+        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+            return jsonify({
+                "error": "Gemini API quota exceeded. Please try again later."
+            }), 429
 
         return jsonify({
             "error": "Unable to analyze the document right now. Please try again."
@@ -397,6 +438,12 @@ QUESTION:
     except Exception as error:
 
         print("QUESTION ERROR:", error)
+
+        err_str = str(error)
+        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+            return jsonify({
+                "error": "Gemini API quota exceeded. Please try again later."
+            }), 429
 
         return jsonify({
             "error": "Unable to answer the question right now."

@@ -1,17 +1,17 @@
-# OpenLaw — AI-Powered Legal Document Simplifier
+# OpenLaw — AI-Powered Legal Document Simplifier & Favorability Engine
 
-**OpenLaw** is a simple full-stack web application designed for ordinary people to easily understand Indian legal documents (rental agreements, employment contracts, service agreements, NDAs, etc.).
+**OpenLaw** is a full-stack web application designed to help everyday people easily understand complex Indian legal documents (rental agreements, employment contracts, service agreements, NDAs, etc.).
 
-It extracts text from uploaded PDF documents, analyzes them using Google Gemini AI, and presents structured explanations, key parties, financial obligations, important clauses, risk attention areas, and interactive analytics.
+It extracts text from uploaded PDF documents, analyzes them using Google Gemini AI, and presents structured plain-English explanations, key parties, financial obligations, important clauses, risk attention areas, party favorability analysis, and interactive document Q&A.
 
 ---
 
 ## Technologies Used
 
-* **Frontend**: HTML5, CSS3, Vanilla JavaScript, Chart.js (CDN)
+* **Frontend**: HTML5, Vanilla CSS3 (Apple Design System), Vanilla JavaScript
 * **Backend**: Python 3.12, Flask
 * **PDF Processing**: PyMuPDF (`fitz`)
-* **AI Analysis**: Google Gemini API (`google-genai`)
+* **AI Analysis**: Google Gemini API (`google-genai` SDK)
 * **Environment Management**: `python-dotenv`
 
 ---
@@ -21,19 +21,20 @@ It extracts text from uploaded PDF documents, analyzes them using Google Gemini 
 ```
 OpenLaw/
 │
-├── app.py              # Main Flask backend application (routes, PDF text extraction, Gemini AI prompt)
+├── app.py              # Main Flask backend (routes, PDF text extraction, Gemini AI prompts)
 ├── requirements.txt    # Python dependencies
+├── DESIGN.md           # Apple design system specifications & UI tokens
 ├── .env                # API key storage (private)
 ├── .env.example        # Environment variable template
 ├── .gitignore          # Git exclusion file
 ├── README.md           # Project documentation
 │
 ├── templates/
-│   └── index.html      # Main user interface
+│   └── index.html      # Main responsive user interface
 │
 └── static/
-    ├── style.css       # Clean legal-tech styling
-    └── script.js       # Dynamic UI interaction & Chart.js rendering
+    ├── style.css       # Clean legal-tech styling & design system components
+    └── script.js       # Dynamic UI logic, demo mode, favorability rendering & report export
 ```
 
 ---
@@ -41,13 +42,13 @@ OpenLaw/
 ## Project Flow
 
 ```
-Upload PDF File
+Upload PDF File OR Select Sample Document
       │
       ▼
 PyMuPDF (fitz) Extracts Plain Text
       │
       ▼
-Python Sends Prompt + Document Text to Gemini AI
+Python Sends Structured Prompt + Document Text to Gemini AI
       │
       ▼
 Gemini Returns Structured JSON Response
@@ -56,8 +57,22 @@ Gemini Returns Structured JSON Response
 Flask Passes JSON to Vanilla JavaScript
       │
       ▼
-Dashboard Displays Overview, Key Info, Clauses, Attention Areas & Charts
+Dashboard Renders Overview, Favorability Metrics, Key Info, Clauses, Attention Areas & Export Tools
 ```
+
+---
+
+## Key Features
+
+1. **PDF Upload & Text Extraction**: Accepts any readable PDF legal document and extracts text page by page.
+2. **Interactive Demo Mode**: Includes a pre-configured sample document ("Try Sample Document") for instant testing without requiring a PDF upload or API key.
+3. **AI Document Simplification**: Generates plain-English summaries, detailed overviews, parties involved, important dates, and financial terms.
+4. **Agreement Favorability Engine ("Who Does This Agreement Favor?")**: Evaluates rights, obligations, penalties, and risk distribution between parties to determine who the agreement favors (0–100 favorability score, confidence rating, verdict, per-party progress breakdown, and supporting clause citations).
+5. **Important Clause Breakdown**: Highlights critical clauses with original text excerpts, simple explanations, and importance levels (Low, Medium, High).
+6. **AI-Identified Attention Areas**: Tags potential areas requiring user attention with Low, Medium, or High severity labels.
+7. **Multilingual Processing**: Automatically detects and responds in the document's original language (English, Hindi, Marathi, etc.).
+8. **Export & Report Generation**: Allows users to download a clean formatted text summary (`.txt`) or print/save the entire analysis view as a PDF.
+9. **Interactive Document Q&A**: Context-aware Q&A allowing users to ask specific questions about the uploaded document and receive AI answers grounded strictly in the document text.
 
 ---
 
@@ -113,17 +128,6 @@ Open your browser and navigate to:
 ```
 http://127.0.0.1:5000
 ```
-
----
-
-## Key Features
-
-1. **PDF Upload & Text Extraction**: Accepts any readable PDF legal document and extracts text page by page.
-2. **AI Document Simplification**: Generates a summary, plain-English explanation, parties, dates, and financial terms.
-3. **Important Clause Breakdown**: Highlights critical clauses with original text excerpts, simple explanations, and importance levels.
-4. **AI-Identified Attention Areas**: Tags potential areas requiring user attention with High, Medium, or Low severity labels.
-5. **Visual Analytics**: Interactive Chart.js bar and doughnut charts representing clause distribution and severity levels.
-6. **Interactive Document Q&A**: Allows users to ask specific questions about the uploaded document and receive context-aware answers based strictly on document text.
 
 ---
 

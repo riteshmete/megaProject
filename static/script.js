@@ -157,7 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFileSelected(file) {
         if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-            showError('Please select a valid PDF file.');
+            showError('Please select a valid PDF file (.pdf).');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            showError('The uploaded PDF is too large. Maximum allowed size is 10 MB.');
             return;
         }
 
@@ -206,7 +211,21 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.classList.add('hidden');
 
         analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = '<span class="btn-spinner"></span> Analyzing Document...';
+        let progressStep = 0;
+        const statusMessages = [
+            'Extracting document...',
+            'Analyzing with AI...',
+            'Preparing results...'
+        ];
+        
+        analyzeBtn.innerHTML = `<span class="btn-spinner"></span> ${statusMessages[0]}`;
+
+        const statusInterval = setInterval(() => {
+            progressStep++;
+            if (progressStep < statusMessages.length) {
+                analyzeBtn.innerHTML = `<span class="btn-spinner"></span> ${statusMessages[progressStep]}`;
+            }
+        }, 2500);
 
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -229,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             showError(err.message || 'Unable to analyze the document right now. Please try again.');
         } finally {
+            clearInterval(statusInterval);
             analyzeBtn.disabled = false;
             analyzeBtn.innerHTML = 'Analyze Document';
         }

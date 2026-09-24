@@ -259,7 +259,7 @@ def is_transient_error(error):
 
 
 # =========================================================
-# ASK GEMINI (WITH RETRY BACKOFF AND FALLBACK)
+# ASK GEMINI (STREAMLINED 1-TRY PRIMARY -> 2s PAUSE -> 1-TRY FALLBACK)
 # =========================================================
 def ask_gemini(prompt, response_mime_type=None):
     current_api_key = os.getenv("GEMINI_API_KEY")
@@ -269,44 +269,62 @@ def ask_gemini(prompt, response_mime_type=None):
 
     primary_model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
     fallback_model = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash")
-    models = list(dict.fromkeys([primary_model, fallback_model]))
 
     config = types.GenerateContentConfig(response_mime_type=response_mime_type) if response_mime_type else None
     active_client = client or genai.Client(api_key=current_api_key)
 
-    max_attempts_per_model = 2  # Attempt 1 (initial) + Attempt 2 (retry)
+    # 1. Try GEMINI_MODEL once
+    logger.info(f"[OpenLaw] Gemini attempt model={primary_model}")
+    try:
+        response = active_client.models.generate_content(
+            model=primary_model,
+            contents=prompt,
+            config=config
+        )
 
-    for idx, model in enumerate(models):
-        if idx > 0:
-            logger.info(f"[OpenLaw] Switching to fallback model={model}")
+        if not response or not response.text:
+            raise ValueError(f"Model {primary_model} returned an empty response.")
 
-        for attempt in range(1, max_attempts_per_model + 1):
-            logger.info(f"[OpenLaw] Gemini attempt model={model}")
-            try:
-                response = active_client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                    config=config
-                )
+        logger.info(f"[OpenLaw] Gemini succeeded model={primary_model}")
+        return response.text
 
-                if not response or not response.text:
-                    raise ValueError(f"Model {model} returned an empty response.")
+    except Exception as error:
+        status_val = getattr(error, "code", None) or getattr(error, "status_code", None) or type(error).__name__
+        logger.error(f"[OpenLaw] Gemini transient failure model={primary_model} status={status_val}")
 
-                logger.info(f"[OpenLaw] Gemini succeeded model={model}")
-                return response.text
+        if not is_transient_error(error):
+            safe_msg = str(error)[:150].replace("\n", " ")
+            logger.error(f"[OpenLaw] Non-transient error model={primary_model} | {type(error).__name__} | {safe_msg}")
+            raise error
 
-            except Exception as error:
-                status_val = getattr(error, "code", None) or getattr(error, "status_code", None) or type(error).__name__
-                logger.error(f"[OpenLaw] Gemini transient failure model={model} status={status_val}")
+        logger.info(f"[OpenLaw] Retrying model={primary_model}")
+        time.sleep(2.0)
 
-                if not is_transient_error(error):
-                    safe_msg = str(error)[:150].replace("\n", " ")
-                    logger.error(f"[OpenLaw] Non-transient error model={model} | {type(error).__name__} | {safe_msg}")
-                    raise error
+    # 2. Try GEMINI_FALLBACK_MODEL once
+    if fallback_model != primary_model:
+        logger.info(f"[OpenLaw] Switching to fallback model={fallback_model}")
+        logger.info(f"[OpenLaw] Gemini attempt model={fallback_model}")
+        try:
+            response = active_client.models.generate_content(
+                model=fallback_model,
+                contents=prompt,
+                config=config
+            )
 
-                if attempt < max_attempts_per_model:
-                    logger.info(f"[OpenLaw] Retrying model={model}")
-                    time.sleep(1.5)  # Short exponential/constant backoff for web request safety
+            if not response or not response.text:
+                raise ValueError(f"Model {fallback_model} returned an empty response.")
+
+            logger.info(f"[OpenLaw] Gemini succeeded model={fallback_model}")
+            return response.text
+
+        except Exception as fallback_error:
+            status_val = getattr(fallback_error, "code", None) or getattr(fallback_error, "status_code", None) or type(fallback_error).__name__
+            logger.error(f"[OpenLaw] Gemini transient failure model={fallback_model} status={status_val}")
+
+            if not is_transient_error(fallback_error):
+                safe_msg = str(fallback_error)[:150].replace("\n", " ")
+                logger.error(f"[OpenLaw] Non-transient error model={fallback_model} | {type(fallback_error).__name__} | {safe_msg}")
+                raise fallback_error
 
     logger.error("[OpenLaw] All Gemini models unavailable")
     raise GeminiUnavailableError("The AI service is temporarily busy. Please try again in a moment.")

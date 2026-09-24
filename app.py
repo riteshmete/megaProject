@@ -1,9 +1,11 @@
 import os
+import sys
 import json
 import re
 import uuid
 import time
 import logging
+import traceback
 import pymupdf
 from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
@@ -14,11 +16,12 @@ from google.genai import types
 load_dotenv()
 
 # =========================================================
-# LOGGING CONFIGURATION
+# LOGGING CONFIGURATION (UNBUFFERED STDOUT FOR RENDER)
 # =========================================================
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    stream=sys.stdout
 )
 logger = logging.getLogger("openlaw")
 
@@ -83,9 +86,13 @@ def get_or_create_session_id():
 # =========================================================
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    logger.warning("GEMINI_API_KEY is not set in environment variables.")
+    logger.warning("[OpenLaw] GEMINI_API_KEY is not set in environment variables.")
 
-client = genai.Client(api_key=api_key) if api_key else None
+try:
+    client = genai.Client(api_key=api_key) if api_key else None
+except Exception as client_err:
+    logger.error(f"[OpenLaw] Failed to initialize genai.Client: {type(client_err).__name__} | {client_err}")
+    client = None
 
 
 # =========================================================
@@ -131,7 +138,7 @@ def extract_text(pdf_bytes):
 
     # Cap text length to prevent Gemini payload overflow
     if len(extracted) > MAX_TEXT_LENGTH:
-        logger.info(f"PDF text length ({len(extracted)} chars) exceeds limit ({MAX_TEXT_LENGTH} chars). Truncating.")
+        logger.info(f"[OpenLaw] PDF text length ({len(extracted)} chars) exceeds limit ({MAX_TEXT_LENGTH} chars). Truncating.")
         extracted = extracted[:MAX_TEXT_LENGTH] + "\n\n[Note: Document text truncated for AI processing limits.]"
 
     return extracted
@@ -225,12 +232,12 @@ def sanitize_analysis_schema(data):
 
 
 # =========================================================
-# ASK GEMINI (WITH FALLBACK AND ERROR WRAPPING)
+# ASK GEMINI (WITH FALLBACK AND DETAILED LOGGING)
 # =========================================================
 def ask_gemini(prompt, response_mime_type=None):
     current_api_key = os.getenv("GEMINI_API_KEY")
     if not current_api_key:
-        logger.error("GEMINI_API_KEY missing during API call attempt.")
+        logger.error("[OpenLaw] Gemini failed: GEMINI_API_KEY missing | ValueError | GEMINI_API_KEY is not configured on the server.")
         raise ValueError("GEMINI_API_KEY is not configured on the server.")
 
     primary_model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
@@ -243,7 +250,7 @@ def ask_gemini(prompt, response_mime_type=None):
 
     for model in models:
         try:
-            logger.info(f"Sending prompt to Gemini model: {model}")
+            logger.info(f"[OpenLaw] Calling Gemini: {model}")
             response = active_client.models.generate_content(
                 model=model,
                 contents=prompt,
@@ -253,12 +260,13 @@ def ask_gemini(prompt, response_mime_type=None):
             if not response or not response.text:
                 raise ValueError(f"Model {model} returned an empty response.")
 
-            logger.info(f"Gemini analysis completed successfully with model {model}.")
+            logger.info(f"[OpenLaw] Gemini succeeded: {model}")
             return response.text
 
         except Exception as error:
             last_error = error
-            logger.error(f"Error calling Gemini model '{model}': {type(error).__name__} - {str(error)[:150]}")
+            safe_msg = str(error)[:200].replace("\n", " ")
+            logger.error(f"[OpenLaw] Gemini failed: {model} | {type(error).__name__} | {safe_msg}")
             error_text = str(error).upper()
 
             is_transient = any(
@@ -268,7 +276,7 @@ def ask_gemini(prompt, response_mime_type=None):
             if not is_transient:
                 raise
 
-            logger.info("Retrying request with fallback Gemini model...")
+            logger.info(f"[OpenLaw] Retrying request with fallback model after failure on {model}...")
 
     raise last_error
 
@@ -287,43 +295,50 @@ def home():
 # =========================================================
 @app.route("/analyze", methods=["POST"])
 def analyze():
+    logger.info("[OpenLaw] /analyze request received")
     session_id = get_or_create_session_id()
 
     if "file" not in request.files:
+        logger.warning("[OpenLaw] /analyze rejected: No 'file' key in request.files")
         return jsonify({"error": "Please upload a PDF file."}), 400
 
     file = request.files["file"]
 
     if not file or file.filename == "":
+        logger.warning("[OpenLaw] /analyze rejected: Empty filename")
         return jsonify({"error": "Please select a PDF file."}), 400
 
+    filename_only = os.path.basename(file.filename)
+    logger.info(f"[OpenLaw] PDF received: {filename_only}")
+
     if not file.filename.lower().endswith(".pdf"):
+        logger.warning(f"[OpenLaw] /analyze rejected: Invalid file extension on {filename_only}")
         return jsonify({"error": "Only PDF files (.pdf) are allowed."}), 400
 
-    # MIME type check
     if file.mimetype and file.mimetype.lower() not in ("application/pdf", "application/x-pdf", "octet-stream"):
+        logger.warning(f"[OpenLaw] /analyze rejected: Invalid MIME type '{file.mimetype}' on {filename_only}")
         return jsonify({"error": "Uploaded file must be a valid PDF."}), 400
 
     try:
         pdf_data = file.read()
-        logger.info(f"Received PDF upload for session {session_id[:8]}... (Size: {len(pdf_data)} bytes)")
 
         if len(pdf_data) > MAX_UPLOAD_SIZE:
+            logger.warning(f"[OpenLaw] /analyze rejected: File size ({len(pdf_data)} bytes) exceeds limit ({MAX_UPLOAD_SIZE} bytes)")
             return jsonify({"error": "The uploaded PDF is too large. Maximum allowed size is 10 MB."}), 413
 
         # Extract text & validate binary signature
         text = extract_text(pdf_data)
 
         if len(text) < 20:
+            logger.warning(f"[OpenLaw] /analyze rejected: Short/empty text extracted ({len(text)} chars)")
             return jsonify({
                 "error": "No readable text was found in this PDF. The document may be scanned, image-based, or password-protected."
             }), 400
 
         # Store in server session store for Q&A
         session_store.set_document(session_id, text)
-        logger.info(f"Extracted {len(text)} characters of text for session {session_id[:8]}...")
+        logger.info(f"[OpenLaw] PDF extracted successfully: {len(text)} characters")
 
-        # Prompt injection resistant prompt design
         prompt = f"""
 SYSTEM INSTRUCTION:
 You are OpenLaw, an AI assistant that explains Indian legal documents to ordinary citizens.
@@ -402,31 +417,33 @@ DOCUMENT CONTENT:
 {text}
 """
 
-        logger.info("Calling Gemini API for document analysis...")
         result = ask_gemini(prompt, response_mime_type="application/json")
 
         raw_data = extract_json_from_text(result)
         data = sanitize_analysis_schema(raw_data)
 
-        logger.info("Document analysis completed successfully.")
+        logger.info("[OpenLaw] /analyze completed successfully")
         return jsonify(data)
 
     except ValueError as val_err:
-        logger.warning(f"Validation error: {val_err}")
+        logger.warning(f"[OpenLaw] /analyze validation error: {val_err}")
         return jsonify({"error": str(val_err)}), 400
 
     except (json.JSONDecodeError, KeyError) as json_err:
-        logger.error(f"JSON parsing error: {json_err}")
+        safe_msg = str(json_err)[:200].replace("\n", " ")
+        logger.error(f"[OpenLaw] /analyze failed | {type(json_err).__name__} | {safe_msg}")
+        logger.error(traceback.format_exc())
         return jsonify({"error": "The AI service returned an invalid response format. Please try again."}), 500
 
     except Exception as error:
-        err_str = str(error)
-        logger.error(f"Unhandled server error in /analyze: {err_str[:200]}")
+        safe_msg = str(error)[:200].replace("\n", " ")
+        logger.error(f"[OpenLaw] /analyze failed | {type(error).__name__} | {safe_msg}")
+        logger.error(traceback.format_exc())
 
-        if any(w in err_str.lower() for w in ("429", "resource_exhausted", "quota")):
+        if any(w in safe_msg.lower() for w in ("429", "resource_exhausted", "quota")):
             return jsonify({"error": "The AI service is temporarily busy (quota limit). Please try again in a few moments."}), 429
 
-        return jsonify({"error": "The AI service is temporarily unavailable. Please try again later."}), 500
+        return jsonify({"error": "Unable to analyze the document right now. Please try again."}), 500
 
 
 # =========================================================
@@ -470,16 +487,17 @@ USER QUESTION:
 """
 
     try:
-        logger.info(f"Processing Q&A request for session {session_id[:8]}...")
+        logger.info(f"[OpenLaw] Processing Q&A request for session {session_id[:8]}...")
         answer = ask_gemini(prompt)
 
         return jsonify({"answer": answer})
 
     except Exception as error:
-        err_str = str(error)
-        logger.error(f"Unhandled server error in /ask: {err_str[:200]}")
+        safe_msg = str(error)[:200].replace("\n", " ")
+        logger.error(f"[OpenLaw] /ask failed | {type(error).__name__} | {safe_msg}")
+        logger.error(traceback.format_exc())
 
-        if any(w in err_str.lower() for w in ("429", "resource_exhausted", "quota")):
+        if any(w in safe_msg.lower() for w in ("429", "resource_exhausted", "quota")):
             return jsonify({"error": "The AI service is temporarily busy (quota limit). Please try again in a few moments."}), 429
 
         return jsonify({"error": "Unable to answer the question right now. Please try again later."}), 500
@@ -502,7 +520,7 @@ def not_found_error(e):
 
 @app.errorhandler(413)
 def payload_too_large_error(e):
-    logger.warning("Upload payload exceeded maximum content length.")
+    logger.warning("[OpenLaw] Upload payload exceeded maximum content length.")
     return jsonify({"error": "The uploaded PDF is too large. Maximum allowed size is 10 MB."}), 413
 
 @app.errorhandler(429)
@@ -511,7 +529,7 @@ def rate_limit_error(e):
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    logger.error(f"Internal server error: {e}")
+    logger.error(f"[OpenLaw] Internal server error handler caught: {e}")
     if request.path.startswith(("/analyze", "/ask")):
         return jsonify({"error": "An internal error occurred. Please try again later."}), 500
     return render_template("index.html"), 500
@@ -524,5 +542,5 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     debug_mode = os.getenv("FLASK_DEBUG", "false").lower() in ("true", "1", "yes")
 
-    logger.info(f"Starting OpenLaw server on port {port} (FLASK_DEBUG={debug_mode})")
+    logger.info(f"[OpenLaw] Starting OpenLaw server on port {port} (FLASK_DEBUG={debug_mode})")
     app.run(host="0.0.0.0", port=port, debug=debug_mode)

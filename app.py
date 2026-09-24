@@ -10,7 +10,7 @@ import pymupdf
 from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
+from google.genai import types, errors
 
 # Load environment variables
 load_dotenv()
@@ -34,6 +34,11 @@ app.secret_key = os.getenv("SECRET_KEY") or os.urandom(24).hex()
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
 MAX_TEXT_LENGTH = 60000  # Max characters sent to Gemini to prevent API overload
+
+
+class GeminiUnavailableError(Exception):
+    """Raised when all configured Gemini models fail with transient errors."""
+    pass
 
 
 # =========================================================
@@ -231,8 +236,30 @@ def sanitize_analysis_schema(data):
     return data
 
 
+def is_transient_error(error):
+    """Check if an error is a transient/temporary API failure eligible for retry."""
+    if isinstance(error, errors.ServerError):
+        return True
+
+    code = getattr(error, "code", None) or getattr(error, "status_code", None)
+    if code in (503, 500, 429, 404, 502, 504):
+        return True
+
+    status_str = str(getattr(error, "status", "")).upper()
+    err_str = str(error).upper()
+    err_type = type(error).__name__.upper()
+
+    transient_markers = (
+        "503", "500", "UNAVAILABLE", "INTERNAL", "TIMEOUT",
+        "RESOURCE_EXHAUSTED", "429", "404", "NOT_FOUND",
+        "CONNECTION", "CONNECT", "TEMPORARILY"
+    )
+
+    return any(marker in status_str or marker in err_str or marker in err_type for marker in transient_markers)
+
+
 # =========================================================
-# ASK GEMINI (WITH FALLBACK AND DETAILED LOGGING)
+# ASK GEMINI (WITH RETRY BACKOFF AND FALLBACK)
 # =========================================================
 def ask_gemini(prompt, response_mime_type=None):
     current_api_key = os.getenv("GEMINI_API_KEY")
@@ -245,40 +272,44 @@ def ask_gemini(prompt, response_mime_type=None):
     models = list(dict.fromkeys([primary_model, fallback_model]))
 
     config = types.GenerateContentConfig(response_mime_type=response_mime_type) if response_mime_type else None
-    last_error = None
     active_client = client or genai.Client(api_key=current_api_key)
 
-    for model in models:
-        try:
-            logger.info(f"[OpenLaw] Calling Gemini: {model}")
-            response = active_client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=config
-            )
+    max_attempts_per_model = 2  # Attempt 1 (initial) + Attempt 2 (retry)
 
-            if not response or not response.text:
-                raise ValueError(f"Model {model} returned an empty response.")
+    for idx, model in enumerate(models):
+        if idx > 0:
+            logger.info(f"[OpenLaw] Switching to fallback model={model}")
 
-            logger.info(f"[OpenLaw] Gemini succeeded: {model}")
-            return response.text
+        for attempt in range(1, max_attempts_per_model + 1):
+            logger.info(f"[OpenLaw] Gemini attempt model={model}")
+            try:
+                response = active_client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=config
+                )
 
-        except Exception as error:
-            last_error = error
-            safe_msg = str(error)[:200].replace("\n", " ")
-            logger.error(f"[OpenLaw] Gemini failed: {model} | {type(error).__name__} | {safe_msg}")
-            error_text = str(error).upper()
+                if not response or not response.text:
+                    raise ValueError(f"Model {model} returned an empty response.")
 
-            is_transient = any(
-                marker in error_text
-                for marker in ("503", "500", "UNAVAILABLE", "INTERNAL", "TIMEOUT", "RESOURCE_EXHAUSTED", "429", "404", "NOT_FOUND")
-            )
-            if not is_transient:
-                raise
+                logger.info(f"[OpenLaw] Gemini succeeded model={model}")
+                return response.text
 
-            logger.info(f"[OpenLaw] Retrying request with fallback model after failure on {model}...")
+            except Exception as error:
+                status_val = getattr(error, "code", None) or getattr(error, "status_code", None) or type(error).__name__
+                logger.error(f"[OpenLaw] Gemini transient failure model={model} status={status_val}")
 
-    raise last_error
+                if not is_transient_error(error):
+                    safe_msg = str(error)[:150].replace("\n", " ")
+                    logger.error(f"[OpenLaw] Non-transient error model={model} | {type(error).__name__} | {safe_msg}")
+                    raise error
+
+                if attempt < max_attempts_per_model:
+                    logger.info(f"[OpenLaw] Retrying model={model}")
+                    time.sleep(1.5)  # Short exponential/constant backoff for web request safety
+
+    logger.error("[OpenLaw] All Gemini models unavailable")
+    raise GeminiUnavailableError("The AI service is temporarily busy. Please try again in a moment.")
 
 
 # =========================================================
@@ -425,6 +456,12 @@ DOCUMENT CONTENT:
         logger.info("[OpenLaw] /analyze completed successfully")
         return jsonify(data)
 
+    except GeminiUnavailableError as unavail_err:
+        logger.error(f"[OpenLaw] /analyze failed | GeminiUnavailableError | {unavail_err}")
+        return jsonify({
+            "error": "The AI service is temporarily busy. Please try again in a moment."
+        }), 503
+
     except ValueError as val_err:
         logger.warning(f"[OpenLaw] /analyze validation error: {val_err}")
         return jsonify({"error": str(val_err)}), 400
@@ -440,8 +477,10 @@ DOCUMENT CONTENT:
         logger.error(f"[OpenLaw] /analyze failed | {type(error).__name__} | {safe_msg}")
         logger.error(traceback.format_exc())
 
-        if any(w in safe_msg.lower() for w in ("429", "resource_exhausted", "quota")):
-            return jsonify({"error": "The AI service is temporarily busy (quota limit). Please try again in a few moments."}), 429
+        if is_transient_error(error):
+            return jsonify({
+                "error": "The AI service is temporarily busy. Please try again in a moment."
+            }), 503
 
         return jsonify({"error": "Unable to analyze the document right now. Please try again."}), 500
 
@@ -492,13 +531,21 @@ USER QUESTION:
 
         return jsonify({"answer": answer})
 
+    except GeminiUnavailableError as unavail_err:
+        logger.error(f"[OpenLaw] /ask failed | GeminiUnavailableError | {unavail_err}")
+        return jsonify({
+            "error": "The AI service is temporarily busy. Please try again in a moment."
+        }), 503
+
     except Exception as error:
         safe_msg = str(error)[:200].replace("\n", " ")
         logger.error(f"[OpenLaw] /ask failed | {type(error).__name__} | {safe_msg}")
         logger.error(traceback.format_exc())
 
-        if any(w in safe_msg.lower() for w in ("429", "resource_exhausted", "quota")):
-            return jsonify({"error": "The AI service is temporarily busy (quota limit). Please try again in a few moments."}), 429
+        if is_transient_error(error):
+            return jsonify({
+                "error": "The AI service is temporarily busy. Please try again in a moment."
+            }), 503
 
         return jsonify({"error": "Unable to answer the question right now. Please try again later."}), 500
 

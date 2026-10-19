@@ -91,9 +91,32 @@ def get_or_create_session_id():
 
 
 # =========================================================
-# GROQ CLIENT INITIALIZATION
+# GROQ CLIENT INITIALIZATION & HELPERS
 # =========================================================
-api_key = os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
+def get_clean_api_key():
+    """Retrieve and sanitize Groq API key, ignoring non-Groq keys."""
+    raw = (os.getenv("GROQ_API_KEY") or "").strip().strip('"').strip("'")
+    if raw:
+        return raw
+
+    # Fallback only if GEMINI_API_KEY was populated with a Groq key (starts with 'gsk_')
+    legacy_val = (os.getenv("GEMINI_API_KEY") or "").strip().strip('"').strip("'")
+    if legacy_val.startswith("gsk_"):
+        logger.info("[OpenLaw] Detected Groq key configured under GEMINI_API_KEY variable.")
+        return legacy_val
+
+    return ""
+
+
+def get_clean_model(env_var_name, default_model):
+    """Retrieve and sanitize model name, filtering out legacy Gemini model strings."""
+    val = (os.getenv(env_var_name) or "").strip().strip('"').strip("'")
+    if not val or "gemini" in val.lower():
+        return default_model
+    return val
+
+
+api_key = get_clean_api_key()
 if not api_key:
     logger.warning("[OpenLaw] GROQ_API_KEY is not set in environment variables.")
 
@@ -116,13 +139,17 @@ def add_security_headers(response):
 
 
 # =========================================================
-# HEALTH CHECK ENDPOINT
+# HEALTH CHECK ENDPOINT (DIAGNOSTIC VISIBILITY)
 # =========================================================
 @app.route("/health", methods=["GET"])
 def health():
+    clean_key = get_clean_api_key()
     return jsonify({
         "status": "ok",
-        "service": "OpenLaw"
+        "service": "OpenLaw",
+        "groq_configured": bool(clean_key),
+        "primary_model": get_clean_model("GROQ_MODEL", "openai/gpt-oss-120b"),
+        "fallback_model": get_clean_model("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
     }), 200
 
 
@@ -242,11 +269,17 @@ def sanitize_analysis_schema(data):
 
 def is_transient_error(error):
     """Check if an error is a transient/temporary API failure eligible for retry."""
+    # Never retry client-side authentication or bad request errors
+    if isinstance(error, (groq.AuthenticationError, groq.BadRequestError, groq.PermissionDeniedError, groq.NotFoundError)):
+        return False
+
     if isinstance(error, (groq.InternalServerError, groq.RateLimitError, groq.APIConnectionError, groq.APITimeoutError)):
         return True
 
     code = getattr(error, "status_code", None) or getattr(error, "code", None)
-    if code in (503, 500, 429, 404, 502, 504):
+    if code in (400, 401, 403, 404):
+        return False
+    if code in (503, 500, 429, 502, 504):
         return True
 
     status_str = str(getattr(error, "status", "")).upper()
@@ -255,8 +288,8 @@ def is_transient_error(error):
 
     transient_markers = (
         "503", "500", "UNAVAILABLE", "INTERNAL", "TIMEOUT",
-        "RESOURCE_EXHAUSTED", "429", "404", "NOT_FOUND",
-        "CONNECTION", "CONNECT", "TEMPORARILY", "RATE_LIMIT"
+        "RESOURCE_EXHAUSTED", "429", "CONNECTION", "CONNECT",
+        "TEMPORARILY", "RATE_LIMIT"
     )
 
     return any(marker in status_str or marker in err_str or marker in err_type for marker in transient_markers)
@@ -266,13 +299,13 @@ def is_transient_error(error):
 # ASK GROQ (STREAMLINED 1-TRY PRIMARY -> 2s PAUSE -> 1-TRY FALLBACK)
 # =========================================================
 def ask_groq(prompt, system_instruction=None, response_mime_type=None):
-    current_api_key = os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
+    current_api_key = get_clean_api_key()
     if not current_api_key:
-        logger.error("[OpenLaw] Groq failed: GROQ_API_KEY missing | ValueError | GROQ_API_KEY is not configured on the server.")
-        raise ValueError("GROQ_API_KEY is not configured on the server.")
+        logger.error("[OpenLaw] Groq failed: GROQ_API_KEY missing | ValueError | GROQ_API_KEY is not configured in environment variables.")
+        raise ValueError("GROQ_API_KEY is not configured on the server. Please add GROQ_API_KEY to your deployment Environment Variables.")
 
-    primary_model = os.getenv("GROQ_MODEL") or os.getenv("GEMINI_MODEL") or "openai/gpt-oss-120b"
-    fallback_model = os.getenv("GROQ_FALLBACK_MODEL") or os.getenv("GEMINI_FALLBACK_MODEL") or "openai/gpt-oss-20b"
+    primary_model = get_clean_model("GROQ_MODEL", "openai/gpt-oss-120b")
+    fallback_model = get_clean_model("GROQ_FALLBACK_MODEL", "openai/gpt-oss-20b")
 
     active_client = client or groq.Groq(api_key=current_api_key)
 
@@ -513,6 +546,18 @@ DOCUMENT CONTENT:
             "error": "The AI service is temporarily busy. Please try again in a moment."
         }), 503
 
+    except groq.AuthenticationError as auth_err:
+        logger.error(f"[OpenLaw] /analyze Groq authentication error: {auth_err}")
+        return jsonify({
+            "error": "Groq authentication failed. Please verify that GROQ_API_KEY is properly set in your deployment Environment Variables."
+        }), 401
+
+    except groq.NotFoundError as not_found_err:
+        logger.error(f"[OpenLaw] /analyze Groq model not found error: {not_found_err}")
+        return jsonify({
+            "error": f"The configured Groq model was not found: {not_found_err}"
+        }), 404
+
     except ValueError as val_err:
         logger.warning(f"[OpenLaw] /analyze validation error: {val_err}")
         return jsonify({"error": str(val_err)}), 400
@@ -533,7 +578,11 @@ DOCUMENT CONTENT:
                 "error": "The AI service is temporarily busy. Please try again in a moment."
             }), 503
 
-        return jsonify({"error": "Unable to analyze the document right now. Please try again."}), 500
+        err_text = str(error).strip()
+        if "API key" in err_text or "GROQ" in err_text:
+            return jsonify({"error": err_text}), 400
+
+        return jsonify({"error": f"Unable to analyze document: {safe_msg}" if safe_msg else "Unable to analyze the document right now. Please try again."}), 500
 
 
 # =========================================================
@@ -588,6 +637,16 @@ USER QUESTION:
             "error": "The AI service is temporarily busy. Please try again in a moment."
         }), 503
 
+    except groq.AuthenticationError as auth_err:
+        logger.error(f"[OpenLaw] /ask Groq authentication error: {auth_err}")
+        return jsonify({
+            "error": "Groq authentication failed. Please verify that GROQ_API_KEY is properly set in your deployment Environment Variables."
+        }), 401
+
+    except ValueError as val_err:
+        logger.warning(f"[OpenLaw] /ask validation error: {val_err}")
+        return jsonify({"error": str(val_err)}), 400
+
     except Exception as error:
         safe_msg = str(error)[:200].replace("\n", " ")
         logger.error(f"[OpenLaw] /ask failed | {type(error).__name__} | {safe_msg}")
@@ -598,7 +657,7 @@ USER QUESTION:
                 "error": "The AI service is temporarily busy. Please try again in a moment."
             }), 503
 
-        return jsonify({"error": "Unable to answer the question right now. Please try again later."}), 500
+        return jsonify({"error": f"Unable to answer the question: {safe_msg}" if safe_msg else "Unable to answer the question right now. Please try again later."}), 500
 
 
 # =========================================================

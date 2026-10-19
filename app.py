@@ -9,8 +9,8 @@ import traceback
 import pymupdf
 from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types, errors
+import groq
+
 
 # Load environment variables
 load_dotenv()
@@ -33,12 +33,16 @@ app.secret_key = os.getenv("SECRET_KEY") or os.urandom(24).hex()
 # Configure max upload limit (10 MB)
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
-MAX_TEXT_LENGTH = 60000  # Max characters sent to Gemini to prevent API overload
+MAX_TEXT_LENGTH = 60000  # Max characters sent to AI to prevent API overload
 
 
-class GeminiUnavailableError(Exception):
-    """Raised when all configured Gemini models fail with transient errors."""
+class GroqUnavailableError(Exception):
+    """Raised when all configured Groq models fail with transient errors."""
     pass
+
+
+# Compatibility alias
+GeminiUnavailableError = GroqUnavailableError
 
 
 # =========================================================
@@ -87,16 +91,16 @@ def get_or_create_session_id():
 
 
 # =========================================================
-# GEMINI CLIENT INITIALIZATION
+# GROQ CLIENT INITIALIZATION
 # =========================================================
-api_key = os.getenv("GEMINI_API_KEY")
+api_key = os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
 if not api_key:
-    logger.warning("[OpenLaw] GEMINI_API_KEY is not set in environment variables.")
+    logger.warning("[OpenLaw] GROQ_API_KEY is not set in environment variables.")
 
 try:
-    client = genai.Client(api_key=api_key) if api_key else None
+    client = groq.Groq(api_key=api_key) if api_key else None
 except Exception as client_err:
-    logger.error(f"[OpenLaw] Failed to initialize genai.Client: {type(client_err).__name__} | {client_err}")
+    logger.error(f"[OpenLaw] Failed to initialize groq.Groq: {type(client_err).__name__} | {client_err}")
     client = None
 
 
@@ -154,7 +158,7 @@ def extract_text(pdf_bytes):
 # =========================================================
 def extract_json_from_text(text):
     if not text:
-        raise ValueError("Empty response received from Gemini.")
+        raise ValueError("Empty response received from AI service.")
 
     text = text.strip()
 
@@ -238,10 +242,10 @@ def sanitize_analysis_schema(data):
 
 def is_transient_error(error):
     """Check if an error is a transient/temporary API failure eligible for retry."""
-    if isinstance(error, errors.ServerError):
+    if isinstance(error, (groq.InternalServerError, groq.RateLimitError, groq.APIConnectionError, groq.APITimeoutError)):
         return True
 
-    code = getattr(error, "code", None) or getattr(error, "status_code", None)
+    code = getattr(error, "status_code", None) or getattr(error, "code", None)
     if code in (503, 500, 429, 404, 502, 504):
         return True
 
@@ -252,82 +256,111 @@ def is_transient_error(error):
     transient_markers = (
         "503", "500", "UNAVAILABLE", "INTERNAL", "TIMEOUT",
         "RESOURCE_EXHAUSTED", "429", "404", "NOT_FOUND",
-        "CONNECTION", "CONNECT", "TEMPORARILY"
+        "CONNECTION", "CONNECT", "TEMPORARILY", "RATE_LIMIT"
     )
 
     return any(marker in status_str or marker in err_str or marker in err_type for marker in transient_markers)
 
 
 # =========================================================
-# ASK GEMINI (STREAMLINED 1-TRY PRIMARY -> 2s PAUSE -> 1-TRY FALLBACK)
+# ASK GROQ (STREAMLINED 1-TRY PRIMARY -> 2s PAUSE -> 1-TRY FALLBACK)
 # =========================================================
-def ask_gemini(prompt, response_mime_type=None):
-    current_api_key = os.getenv("GEMINI_API_KEY")
+def ask_groq(prompt, system_instruction=None, response_mime_type=None):
+    current_api_key = os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
     if not current_api_key:
-        logger.error("[OpenLaw] Gemini failed: GEMINI_API_KEY missing | ValueError | GEMINI_API_KEY is not configured on the server.")
-        raise ValueError("GEMINI_API_KEY is not configured on the server.")
+        logger.error("[OpenLaw] Groq failed: GROQ_API_KEY missing | ValueError | GROQ_API_KEY is not configured on the server.")
+        raise ValueError("GROQ_API_KEY is not configured on the server.")
 
-    primary_model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-    fallback_model = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash")
+    primary_model = os.getenv("GROQ_MODEL") or os.getenv("GEMINI_MODEL") or "openai/gpt-oss-120b"
+    fallback_model = os.getenv("GROQ_FALLBACK_MODEL") or os.getenv("GEMINI_FALLBACK_MODEL") or "openai/gpt-oss-20b"
 
-    config = types.GenerateContentConfig(response_mime_type=response_mime_type) if response_mime_type else None
-    active_client = client or genai.Client(api_key=current_api_key)
+    active_client = client or groq.Groq(api_key=current_api_key)
 
-    # 1. Try GEMINI_MODEL once
-    logger.info(f"[OpenLaw] Gemini attempt model={primary_model}")
+    # Automatically extract system instructions if embedded in the prompt string
+    clean_user_prompt = prompt
+    if not system_instruction and "SYSTEM INSTRUCTION:" in prompt:
+        parts = prompt.split("SYSTEM INSTRUCTION:", 1)[1]
+        split_markers = ["DOCUMENT CONTENT:", "USER QUESTION:"]
+        split_idx = -1
+        for sm in split_markers:
+            idx = parts.find(sm)
+            if idx != -1 and (split_idx == -1 or idx < split_idx):
+                split_idx = idx
+        if split_idx != -1:
+            system_instruction = parts[:split_idx].strip()
+            clean_user_prompt = parts[split_idx:].strip()
+
+    messages = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    messages.append({"role": "user", "content": clean_user_prompt})
+
+    create_kwargs = {
+        "messages": messages,
+    }
+    if response_mime_type == "application/json":
+        create_kwargs["response_format"] = {"type": "json_object"}
+
+
+    # 1. Try GROQ_MODEL once
+    logger.info(f"[OpenLaw] Groq attempt model={primary_model}")
     try:
-        response = active_client.models.generate_content(
+        completion = active_client.chat.completions.create(
             model=primary_model,
-            contents=prompt,
-            config=config
+            **create_kwargs
         )
 
-        if not response or not response.text:
+        content = completion.choices[0].message.content if completion and completion.choices else None
+        if not content:
             raise ValueError(f"Model {primary_model} returned an empty response.")
 
-        logger.info(f"[OpenLaw] Gemini succeeded model={primary_model}")
-        return response.text
+        logger.info(f"[OpenLaw] Groq succeeded model={primary_model}")
+        return content
 
     except Exception as error:
-        status_val = getattr(error, "code", None) or getattr(error, "status_code", None) or type(error).__name__
-        logger.error(f"[OpenLaw] Gemini transient failure model={primary_model} status={status_val}")
+        status_val = getattr(error, "status_code", None) or getattr(error, "code", None) or type(error).__name__
+        logger.error(f"[OpenLaw] Groq transient failure model={primary_model} status={status_val}")
 
         if not is_transient_error(error):
             safe_msg = str(error)[:150].replace("\n", " ")
             logger.error(f"[OpenLaw] Non-transient error model={primary_model} | {type(error).__name__} | {safe_msg}")
             raise error
 
-        logger.info(f"[OpenLaw] Retrying model={primary_model}")
+        logger.info(f"[OpenLaw] Retrying with fallback model={fallback_model}")
         time.sleep(2.0)
 
-    # 2. Try GEMINI_FALLBACK_MODEL once
+    # 2. Try GROQ_FALLBACK_MODEL once
     if fallback_model != primary_model:
         logger.info(f"[OpenLaw] Switching to fallback model={fallback_model}")
-        logger.info(f"[OpenLaw] Gemini attempt model={fallback_model}")
+        logger.info(f"[OpenLaw] Groq attempt model={fallback_model}")
         try:
-            response = active_client.models.generate_content(
+            completion = active_client.chat.completions.create(
                 model=fallback_model,
-                contents=prompt,
-                config=config
+                **create_kwargs
             )
 
-            if not response or not response.text:
+            content = completion.choices[0].message.content if completion and completion.choices else None
+            if not content:
                 raise ValueError(f"Model {fallback_model} returned an empty response.")
 
-            logger.info(f"[OpenLaw] Gemini succeeded model={fallback_model}")
-            return response.text
+            logger.info(f"[OpenLaw] Groq succeeded model={fallback_model}")
+            return content
 
         except Exception as fallback_error:
-            status_val = getattr(fallback_error, "code", None) or getattr(fallback_error, "status_code", None) or type(fallback_error).__name__
-            logger.error(f"[OpenLaw] Gemini transient failure model={fallback_model} status={status_val}")
+            status_val = getattr(fallback_error, "status_code", None) or getattr(fallback_error, "code", None) or type(fallback_error).__name__
+            logger.error(f"[OpenLaw] Groq transient failure model={fallback_model} status={status_val}")
 
             if not is_transient_error(fallback_error):
                 safe_msg = str(fallback_error)[:150].replace("\n", " ")
                 logger.error(f"[OpenLaw] Non-transient error model={fallback_model} | {type(fallback_error).__name__} | {safe_msg}")
                 raise fallback_error
 
-    logger.error("[OpenLaw] All Gemini models unavailable")
-    raise GeminiUnavailableError("The AI service is temporarily busy. Please try again in a moment.")
+    logger.error("[OpenLaw] All Groq models unavailable")
+    raise GroqUnavailableError("The AI service is temporarily busy. Please try again in a moment.")
+
+
+# Compatibility alias
+ask_gemini = ask_groq
 
 
 # =========================================================
@@ -466,7 +499,7 @@ DOCUMENT CONTENT:
 {text}
 """
 
-        result = ask_gemini(prompt, response_mime_type="application/json")
+        result = ask_groq(prompt, response_mime_type="application/json")
 
         raw_data = extract_json_from_text(result)
         data = sanitize_analysis_schema(raw_data)
@@ -474,8 +507,8 @@ DOCUMENT CONTENT:
         logger.info("[OpenLaw] /analyze completed successfully")
         return jsonify(data)
 
-    except GeminiUnavailableError as unavail_err:
-        logger.error(f"[OpenLaw] /analyze failed | GeminiUnavailableError | {unavail_err}")
+    except (GroqUnavailableError, GeminiUnavailableError) as unavail_err:
+        logger.error(f"[OpenLaw] /analyze failed | GroqUnavailableError | {unavail_err}")
         return jsonify({
             "error": "The AI service is temporarily busy. Please try again in a moment."
         }), 503
@@ -545,12 +578,12 @@ USER QUESTION:
 
     try:
         logger.info(f"[OpenLaw] Processing Q&A request for session {session_id[:8]}...")
-        answer = ask_gemini(prompt)
+        answer = ask_groq(prompt)
 
         return jsonify({"answer": answer})
 
-    except GeminiUnavailableError as unavail_err:
-        logger.error(f"[OpenLaw] /ask failed | GeminiUnavailableError | {unavail_err}")
+    except (GroqUnavailableError, GeminiUnavailableError) as unavail_err:
+        logger.error(f"[OpenLaw] /ask failed | GroqUnavailableError | {unavail_err}")
         return jsonify({
             "error": "The AI service is temporarily busy. Please try again in a moment."
         }), 503

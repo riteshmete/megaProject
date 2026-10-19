@@ -2,16 +2,18 @@
 
 **OpenLaw** is a full-stack web application designed to help everyday people easily understand complex legal documents (rental agreements, employment contracts, service agreements, NDAs, divorce agreements, etc.) in plain language.
 
-It extracts text from uploaded PDF documents, analyzes them using Google Gemini AI, and presents structured plain-English explanations, key parties, financial obligations, important clauses, risk attention areas, party favorability analysis, and interactive document Q&A.
+It extracts text from uploaded PDF documents, analyzes them using Groq ultra-fast LPU AI inference, and presents structured plain-English explanations, key parties, financial obligations, important clauses, risk attention areas, party favorability analysis, and interactive document Q&A.
 
 ---
 
 ## Architecture & Production Hardening
 
 * **Frontend**: HTML5, Vanilla CSS3 (Apple Design System), Vanilla JavaScript
-* **Backend**: Python 3.11, Flask 3.x, Gunicorn WSGI Server
+* **Backend**: Python 3.11/3.12, Flask 3.x, Gunicorn WSGI Server
 * **PDF Processing**: PyMuPDF (`fitz` >= 1.23.0)
-* **AI Analysis**: Google Gemini API (`google-genai` SDK >= 0.1.1) with primary + fallback model failover
+* **AI Analysis**: Groq API (`groq` SDK >= 0.9.0) with primary + fallback model failover
+  - **Primary Model**: `openai/gpt-oss-120b` (120B parameters, 131k token context, ultra-high accuracy reasoning & JSON schema enforcement)
+  - **Fallback Model**: `openai/gpt-oss-20b` (20B parameters, 131k token context, ultra-fast failover backup)
 * **Security & Multi-User Isolation**:
   - Thread-safe in-memory session store mapping document context to secure UUID session cookies (preventing cross-user document leakage).
   - PDF binary signature validation (`%PDF-`), MIME check, and 10 MB request size limit (`MAX_CONTENT_LENGTH`).
@@ -26,8 +28,8 @@ It extracts text from uploaded PDF documents, analyzes them using Google Gemini 
 ```
 OpenLaw/
 │
-├── app.py                  # Main Flask backend (routes, session store, PDF extraction, Gemini integration)
-├── requirements.txt        # Python package dependencies (Flask, PyMuPDF, google-genai, gunicorn, etc.)
+├── app.py                  # Main Flask backend (routes, session store, PDF extraction, Groq integration)
+├── requirements.txt        # Python package dependencies (Flask, PyMuPDF, groq, gunicorn, etc.)
 ├── render.yaml             # Render deployment configuration specification
 ├── runtime.txt             # Python runtime declaration (python-3.11.9)
 ├── DESIGN.md               # Apple design system specifications & UI tokens
@@ -62,11 +64,11 @@ PyMuPDF (fitz) Extracts Text In-Memory (No Disk Files Created)
 Text Stored in Server-Side Session Store (Keyed by User UUID Cookie)
       │
       ▼
-Python Sends Prompt + Untrusted Document Text to Gemini AI
-(Auto Failover: primary model `gemini-2.5-flash` ➔ fallback `gemini-1.5-flash`)
+Python Sends System Instructions + Untrusted Document Text to Groq AI
+(Auto Failover: primary model `openai/gpt-oss-120b` ➔ fallback `openai/gpt-oss-20b`)
       │
       ▼
-Gemini Returns Structured JSON Response (Sanitized against default schema)
+Groq Returns Structured JSON Response (Sanitized against default schema)
       │
       ▼
 Flask API Delivers Clean JSON Payload to Frontend JavaScript
@@ -90,7 +92,7 @@ Interactive Document Q&A (/ask endpoint grounded strictly in user's session docu
 6. **Important Clause Breakdown**: Highlights critical clauses with original text excerpts (viewable in an expandable drawer) and simple explanations.
 7. **AI-Identified Attention Areas**: Tags potential risk areas requiring user attention with Low, Medium, or High severity labels.
 8. **Interactive Document Q&A**: Context-aware Q&A allowing users to ask questions grounded strictly in their uploaded document.
-9. **Gemini Model Failover & Resilience**: Configured with automatic model failover on 5xx/API availability errors.
+9. **Groq Model Failover & Resilience**: Configured with automatic model failover on 5xx/API availability errors.
 10. **Export & Report Generation**: Download text summary report (`.txt`) or print/save analysis view as PDF.
 11. **Health Monitoring**: Includes `/health` endpoint for uptime monitoring.
 
@@ -130,12 +132,12 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Open `.env` and add your **Google Gemini API Key** (Get one for free at [Google AI Studio](https://aistudio.google.com/)):
+Open `.env` and add your **Groq API Key** (Get one at [Groq Console](https://console.groq.com/keys)):
 
 ```env
-GEMINI_API_KEY=your_actual_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_FALLBACK_MODEL=gemini-1.5-flash
+GROQ_API_KEY=your_actual_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-120b
+GROQ_FALLBACK_MODEL=openai/gpt-oss-20b
 FLASK_DEBUG=false
 SECRET_KEY=local_development_secret_key
 PORT=5000
@@ -147,13 +149,13 @@ python app.py
 ```
 
 ### 6. Testing Production Mode (Gunicorn)
-Run the application using Gunicorn locally:
+Run the application using Gunicorn:
 
 ```bash
 gunicorn app:app --bind 127.0.0.1:5000
 ```
 
-Open your browser and navigate to `http://127.0.0.1:5000` or test health endpoint `http://127.0.0.1:5000/health`.
+Open your browser and navigate to `http://127.0.0.1:5000` or test the health endpoint at `http://127.0.0.1:5000/health`.
 
 ---
 
@@ -169,9 +171,9 @@ Open your browser and navigate to `http://127.0.0.1:5000` or test health endpoin
    - **Start Command**: `gunicorn app:app`
 5. **Add Environment Variables**:
    Add the following variables under **Environment Variables** in Render:
-   - `GEMINI_API_KEY`: *(Your Google Gemini API key)*
-   - `GEMINI_MODEL`: `gemini-2.5-flash`
-   - `GEMINI_FALLBACK_MODEL`: `gemini-1.5-flash`
+   - `GROQ_API_KEY`: *(Your Groq API key)*
+   - `GROQ_MODEL`: `openai/gpt-oss-120b`
+   - `GROQ_FALLBACK_MODEL`: `openai/gpt-oss-20b`
    - `FLASK_DEBUG`: `false`
    - `SECRET_KEY`: *(Generate a random secret string)*
 6. **Deploy**: Click **Deploy Web Service**.
